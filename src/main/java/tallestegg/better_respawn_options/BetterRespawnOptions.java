@@ -23,6 +23,7 @@ import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -69,6 +70,17 @@ public class BetterRespawnOptions {
                     serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
                     serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
                 }
+            }
+        }
+    }
+
+    @SubscribeEvent
+    public void onDead(LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get()) && Config.COMMON.saveXP.get()) {
+            SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
+            for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
+                if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
+                    savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
             }
         }
     }
