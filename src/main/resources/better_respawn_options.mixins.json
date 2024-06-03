@@ -1,0 +1,15 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "tallestegg.better_respawn_options.mixins",
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "tallestegg.better_respawn_options.refmap.json",
+  "mixins": [
+    "RespawnAnchorBlockMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
