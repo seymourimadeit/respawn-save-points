@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 public class BROData {
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, BetterRespawnOptions.MODID);
 
-    public static final Supplier<AttachmentType<ItemStackHandler>> SAVED_INVENTORY = ATTACHMENT_TYPES.register(
-            "saved_inventory", () -> AttachmentType.serializable(() -> new ItemStackHandler(41)).build()
+    public static final Supplier<AttachmentType<SavedPlayerInventory>> SAVED_INVENTORY = ATTACHMENT_TYPES.register(
+            "saved_inventory", () -> AttachmentType.serializable(() -> new SavedPlayerInventory(41)).build()
     );
 }

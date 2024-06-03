@@ -3,6 +3,8 @@ package tallestegg.better_respawn_options;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -22,12 +24,13 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
+import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
 import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
 import tallestegg.better_respawn_options.data_attachments.BROData;
+import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(BetterRespawnOptions.MODID)
@@ -55,21 +58,25 @@ public class BetterRespawnOptions {
         Level level = player.level();
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
-                ItemStackHandler savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
+                SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
                 }
+                serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
+                serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
+                serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
+                serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
             }
         }
     }
 
     @SubscribeEvent
-    public void onDeath(LivingDropsEvent event) {
+    public void onDrops(LivingDropsEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             Level level = serverPlayer.level();
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
-                ItemStackHandler savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
+                SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack stack = savedPlayerInventory.getStackInSlot(i);
@@ -79,8 +86,17 @@ public class BetterRespawnOptions {
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+
                 }
             }
+        }
+    }
+
+    @SubscribeEvent
+    public void onDropXP(LivingExperienceDropEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get())) {
+            SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
+            event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
         }
     }
 
@@ -96,12 +112,15 @@ public class BetterRespawnOptions {
                     blockPos = blockPos.relative(state.getValue(BedBlock.FACING));
             }
             if (level.getBlockEntity(blockPos) instanceof BedBlockEntity || level.getBlockEntity(blockPos) instanceof RespawnAnchorBlockEntity) {
-                ItemStackHandler savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
+                SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     savedPlayerInventory.setStackInSlot(i, inventory.getItem(i).copy());
                     savedPlayerInventory.getStackInSlot(i).setCount(inventory.getItem(i).copy().getCount());
+                    savedPlayerInventory.setExperienceLevel(serverPlayer.experienceLevel);
+                    savedPlayerInventory.setTotalExperience(serverPlayer.totalExperience);
+                    savedPlayerInventory.setExperienceProgress(serverPlayer.experienceProgress);
                     level.getBlockEntity(blockPos).setChanged();
                 }
                 serverPlayer.sendSystemMessage(Component.translatable("Inventory saved"));
@@ -110,7 +129,7 @@ public class BetterRespawnOptions {
         }
     }
 
-    public static ItemStackHandler getSavedInventory(BlockEntity blockEntity) {
+    public static SavedPlayerInventory getSavedInventory(BlockEntity blockEntity) {
         return blockEntity.getData(BROData.SAVED_INVENTORY); // This applies even to the custom RespawnAnchorBlockEntity class for compatibility with other mods
     }
 }
