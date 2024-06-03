@@ -63,10 +63,12 @@ public class BetterRespawnOptions {
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
                 }
-                serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
-                serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
-                serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
-                serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                if (Config.COMMON.saveXP.get()) {
+                    serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
+                    serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
+                    serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
+                    serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                }
             }
         }
     }
@@ -86,7 +88,6 @@ public class BetterRespawnOptions {
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
-
                 }
             }
         }
@@ -94,7 +95,7 @@ public class BetterRespawnOptions {
 
     @SubscribeEvent
     public void onDropXP(LivingExperienceDropEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get())) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get()) && Config.COMMON.saveXP.get()) {
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
             event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
         }
@@ -118,9 +119,11 @@ public class BetterRespawnOptions {
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     savedPlayerInventory.setStackInSlot(i, inventory.getItem(i).copy());
                     savedPlayerInventory.getStackInSlot(i).setCount(inventory.getItem(i).copy().getCount());
-                    savedPlayerInventory.setExperienceLevel(serverPlayer.experienceLevel);
-                    savedPlayerInventory.setTotalExperience(serverPlayer.totalExperience);
-                    savedPlayerInventory.setExperienceProgress(serverPlayer.experienceProgress);
+                    if (Config.COMMON.saveXP.get()) {
+                        savedPlayerInventory.setExperienceLevel(serverPlayer.experienceLevel);
+                        savedPlayerInventory.setTotalExperience(serverPlayer.totalExperience);
+                        savedPlayerInventory.setExperienceProgress(serverPlayer.experienceProgress);
+                    }
                     level.getBlockEntity(blockPos).setChanged();
                 }
                 serverPlayer.sendSystemMessage(Component.translatable("Inventory saved"));

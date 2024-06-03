@@ -16,11 +16,11 @@ public class Config {
     }
 
     public static class CommonConfig {
-        public final ModConfigSpec.ConfigValue<List<? extends String>> blockEntitiesAcceptableAsSavePoints;
+        public final ModConfigSpec.BooleanValue saveXP;
 
         public CommonConfig(ModConfigSpec.Builder builder) {
-            builder.push("save points");
-            blockEntitiesAcceptableAsSavePoints = builder.defineList("Block entities acceptable as save points", List.of("minecraft:bed", "better_respawn_options:respawn_anchor_block_entity"), obj -> true);
+            builder.push("additional options");
+            saveXP = builder.define("Save xp along with inventory", true);
             builder.pop();
         }
     }
