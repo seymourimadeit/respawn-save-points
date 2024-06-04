@@ -1,10 +1,11 @@
-package tallestegg.better_respawn_options;
+package tallestegg.respawn_save_points.mods;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -14,37 +15,42 @@ import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
-import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
-import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
-import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
-import tallestegg.better_respawn_options.data_attachments.BROData;
-import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.capabilities.*;
+import net.minecraftforge.common.util.LazyOptional;
+import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.living.LivingDropsEvent;
+import net.minecraftforge.event.entity.living.LivingExperienceDropEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModLoadingContext;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.items.IItemHandlerModifiable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import tallestegg.respawn_save_points.mods.block_entities.RSPBlockEntities;
+import tallestegg.respawn_save_points.mods.block_entities.RespawnAnchorBlockEntity;
+import tallestegg.respawn_save_points.mods.capablities.RSPCapabilities;
+import tallestegg.respawn_save_points.mods.capablities.SavedPlayerInventory;
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
-@Mod(BetterRespawnOptions.MODID)
-public class BetterRespawnOptions {
-    public static final String MODID = "better_respawn_options";
+@Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
+@Mod(RespawnSavePoints.MODID)
+public class RespawnSavePoints {
+    public static final String MODID = "respawn_save_points";
 
-    public BetterRespawnOptions(IEventBus modEventBus, Dist dist, ModContainer container) {
+    public RespawnSavePoints() {
+        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         modEventBus.addListener(this::commonSetup);
-        NeoForge.EVENT_BUS.register(this);
+        MinecraftForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
-        container.registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
-        BROData.ATTACHMENT_TYPES.register(modEventBus);
-        BROBlockEntities.BLOCK_ENTITIES.register(modEventBus);
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
@@ -60,6 +66,8 @@ public class BetterRespawnOptions {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
+                if (savedPlayerInventory == null)
+                    return;
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
@@ -76,11 +84,15 @@ public class BetterRespawnOptions {
 
     @SubscribeEvent
     public void onDead(LivingDeathEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get())) {
-            SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
+            SavedPlayerInventory savedPlayerInventory = getSavedInventory(respawnPoint);
+            if (savedPlayerInventory == null)
+                return;
             for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
                 if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
                     savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                respawnPoint.setChanged();
             }
         }
     }
@@ -91,6 +103,8 @@ public class BetterRespawnOptions {
             Level level = serverPlayer.level();
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
+                if (savedPlayerInventory == null)
+                    return;
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack stack = savedPlayerInventory.getStackInSlot(i);
@@ -107,8 +121,10 @@ public class BetterRespawnOptions {
 
     @SubscribeEvent
     public void onDropXP(LivingExperienceDropEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get()) && Config.COMMON.saveXP.get()) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && Config.COMMON.saveXP.get()) {
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
+            if (savedPlayerInventory == null)
+                return;
             event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
         }
     }
@@ -126,6 +142,8 @@ public class BetterRespawnOptions {
             }
             if (level.getBlockEntity(blockPos) instanceof BedBlockEntity || level.getBlockEntity(blockPos) instanceof RespawnAnchorBlockEntity) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
+                if (savedPlayerInventory == null)
+                    return;
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
@@ -144,7 +162,38 @@ public class BetterRespawnOptions {
         }
     }
 
+    @SubscribeEvent
+    public void registerCaps(RegisterCapabilitiesEvent event) {
+        event.register(SavedPlayerInventory.class);
+    }
+
+    @SubscribeEvent
+    public void onAttachingCapabilities(AttachCapabilitiesEvent<BlockEntity> event) {
+        if (event.getObject() instanceof BedBlockEntity || event.getObject() instanceof RespawnAnchorBlockEntity) {
+            SavedPlayerInventory backend = new SavedPlayerInventory(49);
+            LazyOptional<IItemHandlerModifiable> optionalStorage = LazyOptional.of(() -> backend);
+            ICapabilityProvider provider = new ICapabilitySerializable() {
+                @Override
+                public <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
+                    return RSPCapabilities.SAVED_INVENTORY.orEmpty(cap, optionalStorage.cast());
+                }
+
+                @Override
+                public Tag serializeNBT() {
+                    return backend.serializeNBT();
+                }
+
+                @Override
+                public void deserializeNBT(Tag nbt) {
+                    backend.serializeNBT();
+                }
+            };
+            event.addCapability(new ResourceLocation(MODID, "saved_player_inventory"), provider);
+        }
+    }
+
+
     public static SavedPlayerInventory getSavedInventory(BlockEntity blockEntity) {
-        return blockEntity.getData(BROData.SAVED_INVENTORY); // This applies even to the custom RespawnAnchorBlockEntity class for compatibility with other mods
+        return RSPCapabilities.getSavedInventory(blockEntity);
     }
 }

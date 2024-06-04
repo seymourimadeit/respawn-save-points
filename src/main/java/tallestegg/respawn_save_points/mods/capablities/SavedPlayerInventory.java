@@ -1,8 +1,8 @@
-package tallestegg.better_respawn_options.data_attachments;
+package tallestegg.respawn_save_points.mods.capablities;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.neoforged.neoforge.items.ItemStackHandler;
+import net.minecraftforge.items.ItemStackHandler;
 
 public class SavedPlayerInventory extends ItemStackHandler {
     public int experienceLevel;
@@ -15,8 +15,8 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     @Override
-    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
-        CompoundTag nbt = super.serializeNBT(provider);
+    public CompoundTag serializeNBT() {
+        CompoundTag nbt = super.serializeNBT();
         nbt.putInt("ExperienceLevel", this.getExperienceLevel());
         nbt.putInt("TotalExperience", this.getTotalExperience());
         nbt.putInt("PlayerScore", this.getPlayerScore());
@@ -25,8 +25,8 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     @Override
-    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag nbt) {
-        super.deserializeNBT(provider, nbt);
+    public void deserializeNBT(CompoundTag nbt) {
+        super.deserializeNBT(nbt);
         this.setExperienceLevel(nbt.getInt("ExperienceLevel"));
         this.setTotalExperience(nbt.getInt("TotalExperience"));
         this.setExperienceProgress(nbt.getFloat("ExperienceProgress"));
@@ -65,3 +65,4 @@ public class SavedPlayerInventory extends ItemStackHandler {
         this.playerScore = playerScore;
     }
 }
+

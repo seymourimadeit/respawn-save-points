@@ -1,11 +1,10 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "tallestegg.better_respawn_options.mixins",
+  "package": "tallestegg.respawn_save_points.mixins",
   "compatibilityLevel": "JAVA_8",
-  "refmap": "tallestegg.better_respawn_options.refmap.json",
+  "refmap": "Mods.refmap.json",
   "mixins": [
-    "RespawnAnchorBlockMixin"
   ],
   "client": [
   ],
