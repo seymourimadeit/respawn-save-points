@@ -1,7 +1,6 @@
 {
   "pack": {
-    "description": "respawn_save_points resources",
-    "pack_format": 15,
-    "forge:server_data_pack_format": 12
+    "description": "better_respawn_options resources",
+    "pack_format": 26
   }
 }
