@@ -1,4 +1,4 @@
-package tallestegg.respawn_save_points.mods;
+package tallestegg.respawn_save_points;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -27,6 +27,7 @@ import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
@@ -35,10 +36,14 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import tallestegg.respawn_save_points.mods.block_entities.RSPBlockEntities;
-import tallestegg.respawn_save_points.mods.block_entities.RespawnAnchorBlockEntity;
-import tallestegg.respawn_save_points.mods.capablities.RSPCapabilities;
-import tallestegg.respawn_save_points.mods.capablities.SavedPlayerInventory;
+import tallestegg.respawn_save_points.block_entities.RespawnAnchorBlockEntity;
+import tallestegg.respawn_save_points.capablities.RSPCapabilities;
+import tallestegg.respawn_save_points.capablities.SavedPlayerInventory;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
+
+import java.util.Optional;
+import java.util.stream.IntStream;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
 @Mod(RespawnSavePoints.MODID)
@@ -71,6 +76,14 @@ public class RespawnSavePoints {
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
+                }
+                if (ModList.get().isLoaded("curios")) {
+                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
+                    if (curiosApi.isPresent()) {
+                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                            curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i));
+                        }
+                    }
                 }
                 if (Config.COMMON.saveXP.get()) {
                     serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
@@ -144,6 +157,15 @@ public class RespawnSavePoints {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
                 if (savedPlayerInventory == null)
                     return;
+                if (ModList.get().isLoaded("curios")) {
+                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
+                    if (curiosApi.isPresent()) {
+                        savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
+                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                            savedPlayerInventory.setCuriosStackInSlot(i, curiosApi.get().getEquippedCurios().getStackInSlot(i));
+                        }
+                    }
+                }
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
                 for (int i = 0; i < inventory.getContainerSize(); i++) {

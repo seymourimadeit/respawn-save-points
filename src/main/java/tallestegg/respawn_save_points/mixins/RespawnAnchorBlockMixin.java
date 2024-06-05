@@ -1,4 +1,4 @@
-package tallestegg.respawn_save_points.mods.mixins;
+package tallestegg.respawn_save_points.mixins;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
-import tallestegg.respawn_save_points.mods.block_entities.RespawnAnchorBlockEntity;
+import tallestegg.respawn_save_points.block_entities.RespawnAnchorBlockEntity;
 
 @Mixin(RespawnAnchorBlock.class)
 public abstract class RespawnAnchorBlockMixin extends Block implements EntityBlock {

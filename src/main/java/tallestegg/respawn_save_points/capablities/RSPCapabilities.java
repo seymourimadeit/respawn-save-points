@@ -1,4 +1,4 @@
-package tallestegg.respawn_save_points.mods.capablities;
+package tallestegg.respawn_save_points.capablities;
 
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.Capability;
@@ -6,7 +6,7 @@ import net.minecraftforge.common.capabilities.CapabilityManager;
 import net.minecraftforge.common.capabilities.CapabilityToken;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.fml.common.Mod;
-import tallestegg.respawn_save_points.mods.RespawnSavePoints;
+import tallestegg.respawn_save_points.RespawnSavePoints;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class RSPCapabilities {

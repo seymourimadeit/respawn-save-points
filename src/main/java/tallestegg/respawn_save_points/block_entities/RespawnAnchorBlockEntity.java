@@ -1,4 +1,4 @@
-package tallestegg.respawn_save_points.mods.block_entities;
+package tallestegg.respawn_save_points.block_entities;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;

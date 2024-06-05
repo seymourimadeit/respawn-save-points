@@ -1,4 +1,4 @@
-package tallestegg.respawn_save_points.mods;
+package tallestegg.respawn_save_points;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.fml.common.Mod;

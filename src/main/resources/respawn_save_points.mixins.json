@@ -2,9 +2,10 @@
   "required": true,
   "minVersion": "0.8",
   "package": "tallestegg.respawn_save_points.mixins",
-  "compatibilityLevel": "JAVA_8",
-  "refmap": "Mods.refmap.json",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "respawn_save_points.refmap.json",
   "mixins": [
+    "RespawnAnchorBlockMixin"
   ],
   "client": [
   ],
