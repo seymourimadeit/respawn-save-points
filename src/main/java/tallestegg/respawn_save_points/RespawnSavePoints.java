@@ -2,15 +2,24 @@ package tallestegg.respawn_save_points;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -71,8 +80,7 @@ public class RespawnSavePoints {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory == null)
-                    return;
+                if (savedPlayerInventory == null) return;
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
@@ -100,12 +108,29 @@ public class RespawnSavePoints {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(respawnPoint);
-            if (savedPlayerInventory == null)
-                return;
+            if (savedPlayerInventory == null) return;
             for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
-                if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
+                ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
+                ItemStack playerStack = serverPlayer.getInventory().getItem(i);
+                if (!savedStack.isEmpty() && playerStack.isEmpty())
                     savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                respawnPoint.setChanged();
+                if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
+                    if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
+                        NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
+                        NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
+                        ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
+                        ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
+                        for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
+                            ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
+                            ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
+                            if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
+                                savedShulkerItemList.set(shulkerSlot, shulkerItem);
+                                ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
+                            }
+                        }
+                    }
+                    respawnPoint.setChanged();
+                }
             }
         }
     }
@@ -116,8 +141,7 @@ public class RespawnSavePoints {
             Level level = serverPlayer.level();
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory == null)
-                    return;
+                if (savedPlayerInventory == null) return;
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack stack = savedPlayerInventory.getStackInSlot(i);
@@ -136,8 +160,7 @@ public class RespawnSavePoints {
     public void onDropXP(LivingExperienceDropEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer && Config.COMMON.saveXP.get()) {
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
-            if (savedPlayerInventory == null)
-                return;
+            if (savedPlayerInventory == null) return;
             event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
         }
     }
@@ -155,8 +178,7 @@ public class RespawnSavePoints {
             }
             if (level.getBlockEntity(blockPos) instanceof BedBlockEntity || level.getBlockEntity(blockPos) instanceof RespawnAnchorBlockEntity) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
-                if (savedPlayerInventory == null)
-                    return;
+                if (savedPlayerInventory == null) return;
                 if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
                     if (curiosApi.isPresent()) {
@@ -207,7 +229,7 @@ public class RespawnSavePoints {
 
                 @Override
                 public void deserializeNBT(Tag nbt) {
-                    backend.serializeNBT();
+                    backend.deserializeNBT((CompoundTag) nbt);
                 }
             };
             event.addCapability(new ResourceLocation(MODID, "saved_player_inventory"), provider);

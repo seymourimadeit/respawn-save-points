@@ -5,9 +5,16 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import tallestegg.respawn_save_points.Config;
+import tallestegg.respawn_save_points.RespawnSavePoints;
+
+import java.util.stream.Stream;
 
 public class SavedPlayerInventory extends ItemStackHandler {
     public int experienceLevel;
@@ -18,25 +25,24 @@ public class SavedPlayerInventory extends ItemStackHandler {
 
     public SavedPlayerInventory(int size) {
         super(size);
+        this.curiosItems = NonNullList.withSize(size, ItemStack.EMPTY);
     }
 
     @Override
     public CompoundTag serializeNBT() {
         CompoundTag nbt = super.serializeNBT();
         ListTag curiosItems = new ListTag();
-        if (this.curiosItems != null) {
-            for (int i = 0; i < this.curiosItems.size(); i++) {
-                if (!this.curiosItems.get(i).isEmpty()) {
-                    CompoundTag itemTag = new CompoundTag();
-                    itemTag.putInt("Slot", i);
-                    this.curiosItems.get(i).save(itemTag);
-                    curiosItems.add(itemTag);
-                }
+        for (int i = 0; i < this.curiosItems.size(); i++) {
+            if (!this.curiosItems.get(i).isEmpty()) {
+                CompoundTag itemTag = new CompoundTag();
+                itemTag.putInt("Slot", i);
+                this.curiosItems.get(i).save(itemTag);
+                curiosItems.add(itemTag);
             }
-
-            nbt.put("CuriosItems", curiosItems);
-            nbt.putInt("CuriosSize", this.curiosItems.size());
         }
+
+        nbt.put("CuriosItems", curiosItems);
+        nbt.putInt("CuriosSize", this.curiosItems.size());
         nbt.putInt("ExperienceLevel", this.getExperienceLevel());
         nbt.putInt("TotalExperience", this.getTotalExperience());
         nbt.putInt("PlayerScore", this.getPlayerScore());
@@ -46,7 +52,10 @@ public class SavedPlayerInventory extends ItemStackHandler {
 
     @Override
     public void deserializeNBT(CompoundTag nbt) {
-        super.deserializeNBT(nbt);
+        this.setExperienceLevel(nbt.getInt("ExperienceLevel"));
+        this.setTotalExperience(nbt.getInt("TotalExperience"));
+        this.setExperienceProgress(nbt.getFloat("ExperienceProgress"));
+        this.setPlayerScore(nbt.getInt("PlayerScore"));
         this.curiosItems = NonNullList.withSize((nbt.contains("CuriosSize", Tag.TAG_INT) ? nbt.getInt("CuriosSize") : this.curiosItems.size()), ItemStack.EMPTY);
         ListTag tagList = nbt.getList("CuriosItems", Tag.TAG_COMPOUND);
         for (int i = 0; i < tagList.size(); i++) {
@@ -56,14 +65,18 @@ public class SavedPlayerInventory extends ItemStackHandler {
                 this.curiosItems.set(slot, ItemStack.of(itemTags));
             }
         }
-        this.setExperienceLevel(nbt.getInt("ExperienceLevel"));
-        this.setTotalExperience(nbt.getInt("TotalExperience"));
-        this.setExperienceProgress(nbt.getFloat("ExperienceProgress"));
-        this.setPlayerScore(nbt.getInt("PlayerScore"));
+        super.deserializeNBT(nbt);
     }
 
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
+        //   if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
         this.curiosItems.set(slot, stack);
+    }
+
+    @Override
+    public void setStackInSlot(int slot, @NotNull ItemStack stack) {
+        //  if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
+        super.setStackInSlot(slot, stack);
     }
 
     public ItemStack getCuriosStackInSlot(int slot) {
@@ -72,7 +85,6 @@ public class SavedPlayerInventory extends ItemStackHandler {
 
     public void setCuriosItemsSize(int size) {
         this.curiosItems = NonNullList.withSize(size, ItemStack.EMPTY);
-        System.out.println(curiosItems);
     }
 
     public int getExperienceLevel() {
