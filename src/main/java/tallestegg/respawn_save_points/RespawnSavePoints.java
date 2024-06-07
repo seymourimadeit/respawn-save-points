@@ -43,6 +43,7 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackBlock;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import tallestegg.respawn_save_points.block_entities.RespawnAnchorBlockEntity;
@@ -115,6 +116,9 @@ public class RespawnSavePoints {
                 if (!savedStack.isEmpty() && playerStack.isEmpty())
                     savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
                 if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
+                    if (savedBlockItem.getBlock() instanceof BackpackBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
+
+                    }
                     if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
                         NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
                         NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
@@ -123,11 +127,17 @@ public class RespawnSavePoints {
                         for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
                             ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
                             ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
-                            if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
+                            if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
                                 savedShulkerItemList.set(shulkerSlot, shulkerItem);
-                                ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
-                            }
+                            if (shulkerItem.getCount() > savedShulkerItem.getCount())
+                                shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                            if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
+                                shulkerItem.setDamageValue(shulkerItem.getDamageValue() - savedShulkerItem.getDamageValue());
+                            serverPlayer.drop(shulkerItem, true);
+                            ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
+                            ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
                         }
+                        playerStack.setCount(-1);
                     }
                     respawnPoint.setChanged();
                 }
