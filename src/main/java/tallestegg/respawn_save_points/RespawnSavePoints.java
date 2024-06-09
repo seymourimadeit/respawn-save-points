@@ -15,6 +15,7 @@ import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -43,7 +44,12 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackBlock;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackStorage;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.BackpackWrapper;
+import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import tallestegg.respawn_save_points.block_entities.RespawnAnchorBlockEntity;
@@ -54,6 +60,7 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.Optional;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
 @Mod(RespawnSavePoints.MODID)
@@ -115,10 +122,58 @@ public class RespawnSavePoints {
                 ItemStack playerStack = serverPlayer.getInventory().getItem(i);
                 if (!savedStack.isEmpty() && playerStack.isEmpty())
                     savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
-                    if (savedBlockItem.getBlock() instanceof BackpackBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
-
+         /*       if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
+                    NonNullList<ItemStack> playerBundle = NonNullList.create();
+                    getContents(playerStack).forEach(playerBundle::add);
+                    NonNullList<ItemStack> savedPlayerBundle = NonNullList.create();
+                    getContents(savedStack).forEach(savedPlayerBundle::add);
+                    if (savedPlayerBundle.size() < playerBundle.size())
+                        savedPlayerBundle.remove()
+                    for (int bundleSLot = 0; bundleSLot < savedPlayerBundle.size(); bundleSLot++) {
+                        ItemStack bundleItem = playerBundle.get(bundleSLot);
+                        ItemStack savedBundleItem = savedPlayerBundle.get(bundleSLot);
+                        if (bundleItem.isEmpty() && !savedBundleItem.isEmpty())
+                            setBundleItem(bundleSLot, savedStack, bundleItem.copy());
+                        if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
+                            if (bundleItem.getCount() > savedBundleItem.getCount()) {
+                                bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
+                                serverPlayer.drop(bundleItem, true);
+                            }
+                            if (bundleItem.getCount() < savedBundleItem.getCount())
+                                bundleItem.setCount(bundleItem.getCount());
+                            if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
+                                savedBundleItem.setDamageValue(bundleItem.getDamageValue());
+                        } else {
+                            serverPlayer.drop(bundleItem, true);
+                        }
+                        setBundleItem(bundleSLot, savedStack, savedBundleItem.copy());
                     }
+                    playerStack.setCount(-1);
+                }*/
+                if (savedStack.getItem() instanceof BackpackItem savedBackPack && playerStack.getItem() instanceof BackpackItem backPack) {
+                    InventoryHandler playerBackpackHandler = playerStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                    InventoryHandler savedBackpackHandler = savedStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                    for (int backPackSlot = 0; backPackSlot < playerBackpackHandler.getSlots(); backPackSlot++) {
+                        ItemStack savedBackpackItem = savedBackpackHandler.getStackInSlot(backPackSlot);
+                        ItemStack playerBackpackitem = playerBackpackHandler.getStackInSlot(backPackSlot);
+                        if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
+                            savedBackpackHandler.setStackInSlot(backPackSlot, playerBackpackitem);
+                        if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
+                            if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
+                                playerBackpackitem.setCount(playerBackpackitem.getCount() - savedBackpackItem.getCount());
+                                serverPlayer.drop(playerBackpackitem, true);
+                            }
+                            if (playerBackpackitem.getCount() < savedBackpackItem.getCount())
+                                savedBackpackItem.setCount(playerBackpackitem.getCount());
+                            if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
+                                savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
+                        } else {
+                            serverPlayer.drop(playerBackpackitem, true);
+                        }
+                        playerBackpackHandler.setStackInSlot(backPackSlot, savedBackpackItem);
+                    }
+                }
+                if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
                     if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
                         NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
                         NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
@@ -129,11 +184,18 @@ public class RespawnSavePoints {
                             ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
                             if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
                                 savedShulkerItemList.set(shulkerSlot, shulkerItem);
-                            if (shulkerItem.getCount() > savedShulkerItem.getCount())
-                                shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
-                            if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
-                                shulkerItem.setDamageValue(shulkerItem.getDamageValue() - savedShulkerItem.getDamageValue());
-                            serverPlayer.drop(shulkerItem, true);
+                            if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
+                                if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
+                                    shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                                    serverPlayer.drop(shulkerItem, true);
+                                }
+                                if (shulkerItem.getCount() > savedShulkerItem.getCount())
+                                    savedShulkerItem.setCount(shulkerItem.getCount());
+                                if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
+                                    savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
+                            } else {
+                                serverPlayer.drop(shulkerItem, true);
+                            }
                             ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
                             ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
                         }
@@ -246,8 +308,29 @@ public class RespawnSavePoints {
         }
     }
 
-
     public static SavedPlayerInventory getSavedInventory(BlockEntity blockEntity) {
         return RSPCapabilities.getSavedInventory(blockEntity);
+    }
+
+    private static Stream<ItemStack> getContents(ItemStack p_150783_) {
+        CompoundTag compoundtag = p_150783_.getTag();
+        if (compoundtag == null) {
+            return Stream.empty();
+        } else {
+            ListTag listtag = compoundtag.getList("Items", 10);
+            return listtag.stream().map(CompoundTag.class::cast).map(ItemStack::of);
+        }
+    }
+
+    private static void setBundleItem(int slot, ItemStack bundleStack, ItemStack newStack) {
+        CompoundTag compoundtag = bundleStack.getOrCreateTag();
+        if (!compoundtag.contains("Items")) {
+            compoundtag.put("Items", new ListTag());
+        } else {
+            ListTag listtag = compoundtag.getList("Items", 10);
+            CompoundTag compoundtag2 = new CompoundTag();
+            newStack.save(compoundtag2);
+            listtag.add(slot, compoundtag2);
+        }
     }
 }
