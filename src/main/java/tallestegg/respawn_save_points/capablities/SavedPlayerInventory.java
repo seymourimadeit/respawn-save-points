@@ -69,14 +69,14 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
-        //   if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
-        this.curiosItems.set(slot, stack);
+        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
+            this.curiosItems.set(slot, stack);
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
-        //  if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
-        super.setStackInSlot(slot, stack);
+        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
+            super.setStackInSlot(slot, stack);
     }
 
     public ItemStack getCuriosStackInSlot(int slot) {
@@ -117,6 +117,10 @@ public class SavedPlayerInventory extends ItemStackHandler {
 
     public void setPlayerScore(int playerScore) {
         this.playerScore = playerScore;
+    }
+
+    public NonNullList<ItemStack> getCuriosItems() {
+        return this.curiosItems;
     }
 }
 

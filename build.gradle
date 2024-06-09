@@ -148,6 +148,10 @@ dependencies {
     implementation fg.deobf("curse.maven:curios-309927:5367944")
     implementation fg.deobf("curse.maven:sophisticated-backpacks-422301:5296475")
     implementation fg.deobf("curse.maven:sophisticated-core-618298:5326245")
+    implementation fg.deobf("curse.maven:quark-243121:5400634")
+    implementation fg.deobf("curse.maven:zeta-968868:5254672")
+    implementation fg.deobf("curse.maven:backpacked-352835:5401965")
+    implementation fg.deobf("curse.maven:framework-549225:5388226")
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 
