@@ -169,7 +169,7 @@ public class RespawnSavePoints {
                                     shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
                                     serverPlayer.drop(shulkerItem, true);
                                 }
-                                if (shulkerItem.getCount() > savedShulkerItem.getCount())
+                                if (shulkerItem.getCount() < savedShulkerItem.getCount())
                                     savedShulkerItem.setCount(shulkerItem.getCount());
                                 if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
                                     savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
