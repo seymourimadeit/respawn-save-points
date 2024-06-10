@@ -1,8 +1,5 @@
 package tallestegg.respawn_save_points;
 
-import com.mrcrayfish.backpacked.inventory.BackpackInventory;
-import com.mrcrayfish.backpacked.inventory.BackpackedInventoryAccess;
-import com.mrcrayfish.backpacked.util.InventoryHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
@@ -10,11 +7,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.tags.BlockTags;
-import net.minecraft.world.Container;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -49,10 +43,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackBlock;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackStorage;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.BackpackWrapper;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,9 +54,7 @@ import tallestegg.respawn_save_points.capablities.SavedPlayerInventory;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
@@ -128,34 +117,27 @@ public class RespawnSavePoints {
                 ItemStack playerStack = serverPlayer.getInventory().getItem(i);
                 if (!savedStack.isEmpty() && playerStack.isEmpty())
                     savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-         /*       if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
-                    NonNullList<ItemStack> playerBundle = NonNullList.create();
-                    getContents(playerStack).forEach(playerBundle::add);
-                    NonNullList<ItemStack> savedPlayerBundle = NonNullList.create();
-                    getContents(savedStack).forEach(savedPlayerBundle::add);
-                    if (savedPlayerBundle.size() < playerBundle.size())
-                        savedPlayerBundle.remove()
-                    for (int bundleSLot = 0; bundleSLot < savedPlayerBundle.size(); bundleSLot++) {
-                        ItemStack bundleItem = playerBundle.get(bundleSLot);
-                        ItemStack savedBundleItem = savedPlayerBundle.get(bundleSLot);
-                        if (bundleItem.isEmpty() && !savedBundleItem.isEmpty())
-                            setBundleItem(bundleSLot, savedStack, bundleItem.copy());
+              if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
+                    for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
+                        ItemStack bundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, playerStack);
+                        ItemStack savedBundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, savedStack);
+                        if (!savedBundleItem.isEmpty() && bundleItem.isEmpty())
+                            RespawnSavePoints.setBundleItem(bundleSlot, savedStack, new ItemStack(Items.AIR));
                         if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
                             if (bundleItem.getCount() > savedBundleItem.getCount()) {
                                 bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
                                 serverPlayer.drop(bundleItem, true);
                             }
                             if (bundleItem.getCount() < savedBundleItem.getCount())
-                                bundleItem.setCount(bundleItem.getCount());
+                                savedBundleItem.setCount(bundleItem.getCount());
                             if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
                                 savedBundleItem.setDamageValue(bundleItem.getDamageValue());
                         } else {
                             serverPlayer.drop(bundleItem, true);
                         }
-                        setBundleItem(bundleSLot, savedStack, savedBundleItem.copy());
+                        playerStack.setCount(0);
                     }
-                    playerStack.setCount(-1);
-                }*/
+                }
                 if (ModList.get().isLoaded("sophisticatedbackpacks")) {
                     if (savedStack.getItem() instanceof BackpackItem && playerStack.getItem() instanceof BackpackItem) {
                         InventoryHandler playerBackpackHandler = playerStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
@@ -245,8 +227,8 @@ public class RespawnSavePoints {
                     ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
                     if (playerCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem backpackItem && savedCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem) {
                         for (int backPackSlot = 0; backPackSlot < (backpackItem.getColumnCount() * backpackItem.getRowCount()); backPackSlot++) {
-                            ItemStack savedBackpackItem = RespawnSavePoints.getBackpackedBackPackItems(backPackSlot, savedCuriosStack);
-                            ItemStack playerBackpackitem = RespawnSavePoints.getBackpackedBackPackItems(backPackSlot, playerCuriosStack);
+                            ItemStack savedBackpackItem = RespawnSavePoints.getItemsFromNBT(backPackSlot, savedCuriosStack);
+                            ItemStack playerBackpackitem = RespawnSavePoints.getItemsFromNBT(backPackSlot, playerCuriosStack);
                             if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
                                 RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, ItemStack.EMPTY);
                             if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
@@ -265,7 +247,6 @@ public class RespawnSavePoints {
                         playerCuriosStack.setCount(-1);
                     }
                     respawnPoint.setChanged();
-                    //playerCuriosStack.setCount(-1);
                 }
             }
         }
@@ -394,11 +375,11 @@ public class RespawnSavePoints {
             ListTag listtag = compoundtag.getList("Items", 10);
             CompoundTag compoundtag2 = new CompoundTag();
             newStack.save(compoundtag2);
-            listtag.add(slot, compoundtag2);
+            listtag.set(slot, compoundtag2);
         }
     }
 
-    public static ItemStack getBackpackedBackPackItems(int slot, ItemStack item) {
+    public static ItemStack getItemsFromNBT(int slot, ItemStack item) {
         CompoundTag tag = item.getOrCreateTag();
         if (!tag.contains("Items")) {
             tag.put("Items", new ListTag());
@@ -406,19 +387,8 @@ public class RespawnSavePoints {
             ListTag listtag = tag.getList("Items", 10);
             return ItemStack.of(listtag.getCompound(slot));
         }
-        return null;
+        return ItemStack.EMPTY;
     }
-
-// Use for Bundles
-   /* public static void setBackpackedBackpackItems(int slot, ItemStack backpackStack, ItemStack stackToPutIn) {
-        CompoundTag tag = backpackStack.getOrCreateTag();
-        if (!tag.contains("Items")) {
-            tag.put("Items", new ListTag());
-        } else {
-            ListTag listtag = tag.getList("Items", 10);
-            listtag.set(slot, stackToPutIn.save(new CompoundTag()));
-        }
-    }*/
 
     public static void setBackpackedBackpackItems(int slot, ItemStack backpackStack, ItemStack stackToPutIn) {
         CompoundTag tag = backpackStack.getOrCreateTag();
