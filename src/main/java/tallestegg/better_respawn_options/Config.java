@@ -1,5 +1,6 @@
 package tallestegg.better_respawn_options;
 
+import com.google.common.collect.ImmutableList;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -17,10 +18,12 @@ public class Config {
 
     public static class CommonConfig {
         public final ModConfigSpec.BooleanValue saveXP;
+        public final ModConfigSpec.ConfigValue<List<? extends String>> itemBlacklist;
 
         public CommonConfig(ModConfigSpec.Builder builder) {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
+            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
             builder.pop();
         }
     }

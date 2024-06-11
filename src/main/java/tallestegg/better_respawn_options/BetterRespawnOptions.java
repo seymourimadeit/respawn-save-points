@@ -3,7 +3,11 @@ package tallestegg.better_respawn_options;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.ContainerHelper;
@@ -27,6 +31,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -43,8 +48,11 @@ import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
 import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
 import tallestegg.better_respawn_options.data_attachments.BROData;
 import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.List;
+import java.util.Optional;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(BetterRespawnOptions.MODID)
@@ -77,6 +85,14 @@ public class BetterRespawnOptions {
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
                 }
+                if (ModList.get().isLoaded("curios")) {
+                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
+                    if (curiosApi.isPresent()) {
+                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                            curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
+                        }
+                    }
+                }
                 if (Config.COMMON.saveXP.get()) {
                     serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
                     serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
@@ -107,17 +123,19 @@ public class BetterRespawnOptions {
                     for (int bundleSlot = 0; bundleSlot < bundleItemList.items.size(); bundleSlot++) {
                         ItemStack bundleItem = bundleItemList.items.get(bundleSlot);
                         ItemStack savedBundleItem = savedBundleItemList.items.get(bundleSlot);
+                        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(bundleItem.getItem().toString()))))
+                            serverPlayer.drop(bundleItem, false);
                         if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
                             if (bundleItem.getCount() > savedBundleItem.getCount()) {
                                 bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
-                                serverPlayer.drop(bundleItem, true);
+                                serverPlayer.drop(bundleItem, false);
                             }
                             if (bundleItem.getCount() < savedBundleItem.getCount())
                                 savedBundleItem.setCount(bundleItem.getCount());
                             if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
                                 savedBundleItem.setDamageValue(bundleItem.getDamageValue());
                         } else {
-                            serverPlayer.drop(bundleItem, true);
+                            serverPlayer.drop(bundleItem, false);
                         }
                         playerStack.setCount(0);
                     }
@@ -132,10 +150,12 @@ public class BetterRespawnOptions {
                             if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
                                 savedShulkerContainerList.setStackInSlot(shulkerSlot, ItemStack.EMPTY);
                             }
+                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(shulkerItem.getItem().toString()))))
+                                serverPlayer.drop(shulkerItem, false);
                             if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
                                 if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
                                     shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
-                                    serverPlayer.drop(shulkerItem, true);
+                                    serverPlayer.drop(shulkerItem, false);
                                 }
                                 if (shulkerItem.getCount() < savedShulkerItem.getCount()) {
                                     savedShulkerItem.setCount(shulkerItem.getCount());
@@ -143,13 +163,21 @@ public class BetterRespawnOptions {
                                 if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
                                     savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
                             } else {
-                                serverPlayer.drop(shulkerItem, true);
+                                serverPlayer.drop(shulkerItem, false);
                             }
                         }
                         playerStack.setCount(-1);
                     }
                     respawnPoint.setChanged();
                 }
+            }
+            for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer);
+                ICuriosItemHandler playerCuriosHandler = curiosApi.get();
+                ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
+                ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
+                if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
+                    savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
             }
         }
     }
@@ -163,6 +191,15 @@ public class BetterRespawnOptions {
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack stack = savedPlayerInventory.getStackInSlot(i);
+                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
+                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
+                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                    event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
+                    event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                    level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                }
+                for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                    ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
@@ -197,6 +234,15 @@ public class BetterRespawnOptions {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(blockPos));
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
+                if (ModList.get().isLoaded("curios")) {
+                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
+                    if (curiosApi.isPresent()) {
+                        savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
+                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                            savedPlayerInventory.setCuriosStackInSlot(i, curiosApi.get().getEquippedCurios().getStackInSlot(i).copy());
+                        }
+                    }
+                }
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     savedPlayerInventory.setStackInSlot(i, inventory.getItem(i).copy());
                     savedPlayerInventory.getStackInSlot(i).setCount(inventory.getItem(i).copy().getCount());
@@ -215,17 +261,5 @@ public class BetterRespawnOptions {
 
     public static SavedPlayerInventory getSavedInventory(BlockEntity blockEntity) {
         return blockEntity.getData(BROData.SAVED_INVENTORY); // This applies even to the custom RespawnAnchorBlockEntity class for compatibility with other mods
-    }
-
-    private static int findStackIndex(ItemStack itemStack, List<ItemStack> items) {
-        if (itemStack.isStackable()) {
-            for (int i = 0; i < items.size(); i++) {
-                if (ItemStack.isSameItemSameComponents(items.get(i), itemStack)) {
-                    return i;
-                }
-            }
-
-        }
-        return -1;
     }
 }

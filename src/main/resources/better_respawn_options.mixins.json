@@ -2,7 +2,7 @@
   "required": true,
   "minVersion": "0.8",
   "package": "tallestegg.better_respawn_options.mixins",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_17",
   "refmap": "tallestegg.better_respawn_options.refmap.json",
   "mixins": [
     "RespawnAnchorBlockMixin"
