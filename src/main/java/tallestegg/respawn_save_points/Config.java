@@ -25,7 +25,7 @@ public class Config {
         public CommonConfig(ForgeConfigSpec.Builder builder) {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
-            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("#minecraft:pickaxes"), obj -> true);
+            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
             builder.pop();
         }
     }
