@@ -127,7 +127,7 @@ public class RespawnSavePoints {
                     for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
                         ItemStack bundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, playerStack);
                         ItemStack savedBundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, savedStack);
-                        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(bundleItem.getItem().toString()))))
+                        if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(bundleItem.getItem()).toString()))
                             serverPlayer.drop(bundleItem, false);
                         if (!savedBundleItem.isEmpty() && bundleItem.isEmpty())
                             RespawnSavePoints.setBundleItem(bundleSlot, savedStack, new ItemStack(Items.AIR));
@@ -170,7 +170,7 @@ public class RespawnSavePoints {
                         for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
                             ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
                             ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
-                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(shulkerItem.getItem().toString()))))
+                            if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(shulkerItem.getItem()).toString()))
                                 serverPlayer.drop(shulkerItem, false);
                             if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
                                 savedShulkerItemList.set(shulkerSlot, shulkerItem);
@@ -292,6 +292,7 @@ public class RespawnSavePoints {
         Level level = player.level();
         BlockPos blockPos = event.getPos();
         BlockState state = level.getBlockState(blockPos);
+        List<String> itemsNotSaved = new ArrayList<>();
         if (player instanceof ServerPlayer serverPlayer) {
             if (state.getBlock() instanceof BedBlock) {
                 if (state.getValue(BedBlock.PART) != BedPart.HEAD)
@@ -302,7 +303,6 @@ public class RespawnSavePoints {
                 if (savedPlayerInventory == null) return;
                 if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
-                    List<String> itemsNotSaved = new ArrayList<>();
                     if (curiosApi.isPresent()) {
                         savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
                         for (int i = 0; i < curiosApi.get().getSlots(); i++) {
@@ -313,14 +313,11 @@ public class RespawnSavePoints {
                         }
                         if (Config.COMMON.includedItemsMessage.get())
                             serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.saved_curios"));
-                        if (!itemsNotSaved.isEmpty() && Config.COMMON.excludedItemsMessage.get())
-                            serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.not_saved", ArrayUtils.toString(itemsNotSaved)));
                         itemsNotSaved.clear();
                     }
                 }
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
-                List<String> itemsNotSaved = new ArrayList<>();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack inventoryItemToBeSaved = inventory.getItem(i);
                     if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(inventoryItemToBeSaved.getItem()).toString()))
@@ -419,7 +416,7 @@ public class RespawnSavePoints {
             ItemStack playerBackpackitem = playerCap.getStackInSlot(backPackSlot);
             if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
                 savedBackpackItem.setCount(0);
-            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
+            if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(playerBackpackitem.getItem()).toString()))
                 player.drop(playerBackpackitem, false);
             if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
                 if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
