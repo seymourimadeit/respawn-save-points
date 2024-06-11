@@ -1,0 +1,5 @@
+{
+  "message.respawn_save_points.not_saved": "Items no guardo son: %s",
+  "message.respawn_save_points.saved": "Inventario guardo",
+  "message.respawn_save_points.saved_curios": "Inventario de Curios guardo"
+}

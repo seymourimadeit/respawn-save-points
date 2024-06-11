@@ -8,6 +8,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
@@ -43,9 +44,11 @@ import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
+import net.minecraftforge.registries.ForgeRegistries;
 import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
 import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
 import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.violetmoon.quark.base.handler.ProxiedItemStackHandler;
@@ -55,6 +58,8 @@ import tallestegg.respawn_save_points.capablities.SavedPlayerInventory;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -297,18 +302,30 @@ public class RespawnSavePoints {
                 if (savedPlayerInventory == null) return;
                 if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
+                    List<String> itemsNotSaved = new ArrayList<>();
                     if (curiosApi.isPresent()) {
                         savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
                         for (int i = 0; i < curiosApi.get().getSlots(); i++) {
-                            savedPlayerInventory.setCuriosStackInSlot(i, curiosApi.get().getEquippedCurios().getStackInSlot(i).copy());
+                            ItemStack curiosItemToBeSaved = curiosApi.get().getEquippedCurios().getStackInSlot(i);
+                            if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(curiosItemToBeSaved.getItem()).toString()))
+                                itemsNotSaved.add(curiosItemToBeSaved.getHoverName().copy().getString());
+                            savedPlayerInventory.setCuriosStackInSlot(i, curiosItemToBeSaved.copy());
                         }
+                        if (Config.COMMON.includedItemsMessage.get())
+                            serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.saved_curios"));
+                        if (!itemsNotSaved.isEmpty() && Config.COMMON.excludedItemsMessage.get())
+                            serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.not_saved", ArrayUtils.toString(itemsNotSaved)));
+                        itemsNotSaved.clear();
                     }
                 }
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
+                List<String> itemsNotSaved = new ArrayList<>();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
-                    savedPlayerInventory.setStackInSlot(i, inventory.getItem(i).copy());
-                    savedPlayerInventory.getStackInSlot(i).setCount(inventory.getItem(i).copy().getCount());
+                    ItemStack inventoryItemToBeSaved = inventory.getItem(i);
+                    if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(inventoryItemToBeSaved.getItem()).toString()))
+                        itemsNotSaved.add(inventoryItemToBeSaved.getHoverName().copy().getString());
+                    savedPlayerInventory.setStackInSlot(i, inventoryItemToBeSaved.copy());
                     if (Config.COMMON.saveXP.get()) {
                         savedPlayerInventory.setExperienceLevel(serverPlayer.experienceLevel);
                         savedPlayerInventory.setTotalExperience(serverPlayer.totalExperience);
@@ -316,8 +333,12 @@ public class RespawnSavePoints {
                     }
                     level.getBlockEntity(blockPos).setChanged();
                 }
-                serverPlayer.sendSystemMessage(Component.translatable("Inventory saved"));
+                if (Config.COMMON.includedItemsMessage.get())
+                    serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.saved"));
+                if (!itemsNotSaved.isEmpty() && Config.COMMON.excludedItemsMessage.get())
+                    serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.not_saved", ArrayUtils.toString(itemsNotSaved)));
                 level.getBlockEntity(blockPos).setChanged();
+                itemsNotSaved.clear();
             }
         }
     }
