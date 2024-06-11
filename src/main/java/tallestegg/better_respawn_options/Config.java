@@ -19,11 +19,15 @@ public class Config {
     public static class CommonConfig {
         public final ModConfigSpec.BooleanValue saveXP;
         public final ModConfigSpec.ConfigValue<List<? extends String>> itemBlacklist;
+        public final ModConfigSpec.BooleanValue excludedItemsMessage;
+        public final ModConfigSpec.BooleanValue includedItemsMessage;
 
         public CommonConfig(ModConfigSpec.Builder builder) {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
             itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
+            includedItemsMessage = builder.define("Show saved items message", true);
+            excludedItemsMessage = builder.define("Show excluded items message", true);
             builder.pop();
         }
     }

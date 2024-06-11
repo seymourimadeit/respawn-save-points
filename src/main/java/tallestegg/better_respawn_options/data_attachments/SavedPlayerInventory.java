@@ -64,13 +64,13 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
+        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()))
             this.curiosItems.set(slot, stack);
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(stack.getItem().toString()))))
+        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()))
             super.setStackInSlot(slot, stack);
     }
 
