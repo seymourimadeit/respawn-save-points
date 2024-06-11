@@ -100,7 +100,6 @@ public class BetterRespawnOptions {
                 if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                     BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
                     BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
-                    BundleContents bundlecontents = playerStack.get(DataComponents.BUNDLE_CONTENTS);
                     if (bundleItemList.items.isEmpty() && !savedBundleItemList.items.isEmpty()) {
                         savedBundleItemList.clearItems();
                         savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
