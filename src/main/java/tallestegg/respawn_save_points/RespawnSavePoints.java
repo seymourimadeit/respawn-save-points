@@ -3,6 +3,7 @@ package tallestegg.respawn_save_points;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -121,19 +122,21 @@ public class RespawnSavePoints {
                     for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
                         ItemStack bundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, playerStack);
                         ItemStack savedBundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, savedStack);
+                        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(bundleItem.getItem().toString()))))
+                            serverPlayer.drop(bundleItem, false);
                         if (!savedBundleItem.isEmpty() && bundleItem.isEmpty())
                             RespawnSavePoints.setBundleItem(bundleSlot, savedStack, new ItemStack(Items.AIR));
                         if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
                             if (bundleItem.getCount() > savedBundleItem.getCount()) {
                                 bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
-                                serverPlayer.drop(bundleItem, true);
+                                serverPlayer.drop(bundleItem, false);
                             }
                             if (bundleItem.getCount() < savedBundleItem.getCount())
                                 savedBundleItem.setCount(bundleItem.getCount());
                             if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
                                 savedBundleItem.setDamageValue(bundleItem.getDamageValue());
                         } else {
-                            serverPlayer.drop(bundleItem, true);
+                            serverPlayer.drop(bundleItem, false);
                         }
                         playerStack.setCount(0);
                     }
@@ -162,19 +165,21 @@ public class RespawnSavePoints {
                         for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
                             ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
                             ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
+                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(shulkerItem.getItem().toString()))))
+                                serverPlayer.drop(shulkerItem, false);
                             if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
                                 savedShulkerItemList.set(shulkerSlot, shulkerItem);
                             if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
                                 if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
                                     shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
-                                    serverPlayer.drop(shulkerItem, true);
+                                    serverPlayer.drop(shulkerItem, false);
                                 }
                                 if (shulkerItem.getCount() < savedShulkerItem.getCount())
                                     savedShulkerItem.setCount(shulkerItem.getCount());
                                 if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
                                     savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
                             } else {
-                                serverPlayer.drop(shulkerItem, true);
+                                serverPlayer.drop(shulkerItem, false);
                             }
                             ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
                             ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
@@ -212,19 +217,21 @@ public class RespawnSavePoints {
                         for (int backPackSlot = 0; backPackSlot < (backpackItem.getColumnCount() * backpackItem.getRowCount()); backPackSlot++) {
                             ItemStack savedBackpackItem = RespawnSavePoints.getItemsFromNBT(backPackSlot, savedCuriosStack);
                             ItemStack playerBackpackitem = RespawnSavePoints.getItemsFromNBT(backPackSlot, playerCuriosStack);
+                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
+                                serverPlayer.drop(playerBackpackitem, false);
                             if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
                                 RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, ItemStack.EMPTY);
                             if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
                                 if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
                                     playerBackpackitem.setCount(playerBackpackitem.getCount() - savedBackpackItem.getCount());
-                                    serverPlayer.drop(playerBackpackitem, true);
+                                    serverPlayer.drop(playerBackpackitem, false);
                                 }
                                 if (playerBackpackitem.getCount() > savedBackpackItem.getCount())
                                     savedBackpackItem.setCount(playerBackpackitem.getCount());
                                 if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
                                     savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
                             } else {
-                                serverPlayer.drop(playerBackpackitem, true);
+                                serverPlayer.drop(playerBackpackitem, false);
                             }
                         }
                         playerCuriosStack.setCount(0);
@@ -391,10 +398,12 @@ public class RespawnSavePoints {
             ItemStack playerBackpackitem = playerCap.getStackInSlot(backPackSlot);
             if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
                 savedBackpackItem.setCount(0);
+            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
+                player.drop(playerBackpackitem, false);
             if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
                 if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
                     playerBackpackitem.setCount(playerBackpackitem.getCount() - savedBackpackItem.getCount());
-                    player.drop(playerBackpackitem, true);
+                    player.drop(playerBackpackitem, false);
                 }
                 if (playerBackpackitem.getCount() < savedBackpackItem.getCount())
                     savedBackpackItem.setCount(playerBackpackitem.getCount());
