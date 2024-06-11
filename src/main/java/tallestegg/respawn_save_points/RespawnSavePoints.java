@@ -338,16 +338,6 @@ public class RespawnSavePoints {
         return RSPCapabilities.getSavedInventory(blockEntity);
     }
 
-    private static Stream<ItemStack> getContents(ItemStack p_150783_) {
-        CompoundTag compoundtag = p_150783_.getTag();
-        if (compoundtag == null) {
-            return Stream.empty();
-        } else {
-            ListTag listtag = compoundtag.getList("Items", 10);
-            return listtag.stream().map(CompoundTag.class::cast).map(ItemStack::of);
-        }
-    }
-
     private static void setBundleItem(int slot, ItemStack bundleStack, ItemStack newStack) {
         CompoundTag compoundtag = bundleStack.getOrCreateTag();
         if (!compoundtag.contains("Items")) {
