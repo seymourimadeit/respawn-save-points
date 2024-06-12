@@ -195,6 +195,7 @@ public class RespawnSavePoints {
                 }
             }
             for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                if (ModList.get().isLoaded("curios")) {
                 Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer).resolve();
                 ICuriosItemHandler playerCuriosHandler = curiosApi.get();
                 ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
@@ -243,6 +244,7 @@ public class RespawnSavePoints {
                     }
                     respawnPoint.setChanged();
                 }
+                }
             }
         }
     }
@@ -259,7 +261,8 @@ public class RespawnSavePoints {
                     ItemStack stack = savedPlayerInventory.getStackInSlot(i);
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                    if (Config.COMMON.transferDurability.get())
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
@@ -268,7 +271,8 @@ public class RespawnSavePoints {
                     ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                    if (Config.COMMON.transferDurability.get())
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();

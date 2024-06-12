@@ -22,6 +22,7 @@ public class Config {
 
     public static class CommonConfig {
         public final ForgeConfigSpec.BooleanValue saveXP;
+        public final ForgeConfigSpec.BooleanValue transferDurability;
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> itemBlacklist;
         public final ForgeConfigSpec.BooleanValue excludedItemsMessage;
         public final ForgeConfigSpec.BooleanValue includedItemsMessage;
@@ -29,6 +30,7 @@ public class Config {
         public CommonConfig(ForgeConfigSpec.Builder builder) {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
+            transferDurability = builder.define("Transfer lost durability", true);
             itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
             includedItemsMessage = builder.define("Show saved items message", true);
             excludedItemsMessage = builder.define("Show excluded items message", true);
