@@ -8,7 +8,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
@@ -61,7 +60,6 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
 @Mod(RespawnSavePoints.MODID)
@@ -115,135 +113,137 @@ public class RespawnSavePoints {
     @SubscribeEvent
     public void onDead(LivingDeathEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
-            SavedPlayerInventory savedPlayerInventory = getSavedInventory(respawnPoint);
-            if (savedPlayerInventory == null) return;
-            for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
-                ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
-                ItemStack playerStack = serverPlayer.getInventory().getItem(i);
-                if (!savedStack.isEmpty() && playerStack.isEmpty())
-                    savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
-                    for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
-                        ItemStack bundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, playerStack);
-                        ItemStack savedBundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, savedStack);
-                        if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(bundleItem.getItem()).toString()))
-                            serverPlayer.drop(bundleItem, false);
-                        if (!savedBundleItem.isEmpty() && bundleItem.isEmpty())
-                            RespawnSavePoints.setBundleItem(bundleSlot, savedStack, new ItemStack(Items.AIR));
-                        if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
-                            if (bundleItem.getCount() > savedBundleItem.getCount()) {
-                                bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
+            if (serverPlayer.getRespawnPosition() != null) {
+                BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
+                SavedPlayerInventory savedPlayerInventory = getSavedInventory(respawnPoint);
+                for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
+                    ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
+                    ItemStack playerStack = serverPlayer.getInventory().getItem(i);
+                    if (!savedStack.isEmpty() && playerStack.isEmpty())
+                        savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                    if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
+                        for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
+                            ItemStack bundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, playerStack);
+                            ItemStack savedBundleItem = RespawnSavePoints.getItemsFromNBT(bundleSlot, savedStack);
+                            if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(bundleItem.getItem()).toString()))
+                                serverPlayer.drop(bundleItem, false);
+                            if (!savedBundleItem.isEmpty() && bundleItem.isEmpty())
+                                RespawnSavePoints.setBundleItem(bundleSlot, savedStack, new ItemStack(Items.AIR));
+                            if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
+                                if (bundleItem.getCount() > savedBundleItem.getCount()) {
+                                    bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
+                                    serverPlayer.drop(bundleItem, false);
+                                }
+                                if (bundleItem.getCount() < savedBundleItem.getCount())
+                                    savedBundleItem.setCount(bundleItem.getCount());
+                                if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
+                                    savedBundleItem.setDamageValue(bundleItem.getDamageValue());
+                            } else {
                                 serverPlayer.drop(bundleItem, false);
                             }
-                            if (bundleItem.getCount() < savedBundleItem.getCount())
-                                savedBundleItem.setCount(bundleItem.getCount());
-                            if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
-                                savedBundleItem.setDamageValue(bundleItem.getDamageValue());
-                        } else {
-                            serverPlayer.drop(bundleItem, false);
+                            playerStack.setCount(0);
                         }
-                        playerStack.setCount(0);
                     }
-                }
-                if (ModList.get().isLoaded("sophisticatedbackpacks")) {
-                    if (savedStack.getItem() instanceof BackpackItem && playerStack.getItem() instanceof BackpackItem) {
-                        InventoryHandler playerBackpackHandler = playerStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
-                        InventoryHandler savedBackpackHandler = savedStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
-                        cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
+
+                    if (ModList.get().isLoaded("sophisticatedbackpacks")) {
+                        if (savedStack.getItem() instanceof BackpackItem && playerStack.getItem() instanceof BackpackItem) {
+                            InventoryHandler playerBackpackHandler = playerStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                            InventoryHandler savedBackpackHandler = savedStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                            cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
+                        }
                     }
-                }
-                if (ModList.get().isLoaded("quark")) {
-                    if (savedStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem && playerStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem) {
-                        ProxiedItemStackHandler playerBackpackHandler = (ProxiedItemStackHandler) playerStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
-                        ProxiedItemStackHandler savedBackpackHandler = (ProxiedItemStackHandler) savedStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
-                        cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
-                        playerStack.setCount(0);
+                    if (ModList.get().isLoaded("quark")) {
+                        if (savedStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem && playerStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem) {
+                            ProxiedItemStackHandler playerBackpackHandler = (ProxiedItemStackHandler) playerStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
+                            ProxiedItemStackHandler savedBackpackHandler = (ProxiedItemStackHandler) savedStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
+                            cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
+                            playerStack.setCount(0);
+                        }
                     }
-                }
-                if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
-                    if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
-                        NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
-                        NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
-                        ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
-                        ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
-                        for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
-                            ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
-                            ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
-                            if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(shulkerItem.getItem()).toString()))
-                                serverPlayer.drop(shulkerItem, false);
-                            if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
-                                savedShulkerItemList.set(shulkerSlot, shulkerItem);
-                            if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
-                                if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
-                                    shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                    if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
+                        if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
+                            NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
+                            NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
+                            ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
+                            ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
+                            for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
+                                ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
+                                ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
+                                if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(shulkerItem.getItem()).toString()))
+                                    serverPlayer.drop(shulkerItem, false);
+                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
+                                    savedShulkerItemList.set(shulkerSlot, shulkerItem);
+                                if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
+                                    if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
+                                        shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                                        serverPlayer.drop(shulkerItem, false);
+                                    }
+                                    if (shulkerItem.getCount() < savedShulkerItem.getCount())
+                                        savedShulkerItem.setCount(shulkerItem.getCount());
+                                    if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
+                                        savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
+                                } else {
                                     serverPlayer.drop(shulkerItem, false);
                                 }
-                                if (shulkerItem.getCount() < savedShulkerItem.getCount())
-                                    savedShulkerItem.setCount(shulkerItem.getCount());
-                                if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
-                                    savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
-                            } else {
-                                serverPlayer.drop(shulkerItem, false);
+                                ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
+                                ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
                             }
-                            ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
-                            ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
+                            playerStack.setCount(-1);
                         }
-                        playerStack.setCount(-1);
-                    }
-                    respawnPoint.setChanged();
-                }
-            }
-            for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
-                if (ModList.get().isLoaded("curios")) {
-                Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer).resolve();
-                ICuriosItemHandler playerCuriosHandler = curiosApi.get();
-                ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
-                ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
-                if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
-                    savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                if (ModList.get().isLoaded("sophisticatedbackpacks")) {
-                    if (savedCuriosStack.getItem() instanceof BackpackItem && playerCuriosStack.getItem() instanceof BackpackItem) {
-                        InventoryHandler playerBackpackHandler = playerCuriosStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
-                        InventoryHandler savedBackpackHandler = savedCuriosStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
-                        cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
-                        playerCuriosStack.setCount(0);
+                        respawnPoint.setChanged();
                     }
                 }
-                if (ModList.get().isLoaded("quark")) {
-                    if (savedCuriosStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem && playerCuriosStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem) {
-                        ProxiedItemStackHandler playerBackpackHandler = (ProxiedItemStackHandler) playerCuriosStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
-                        ProxiedItemStackHandler savedBackpackHandler = (ProxiedItemStackHandler) savedCuriosStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
-                        cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
-                        playerCuriosStack.setCount(0);
-                    }
-                }
-                if (ModList.get().isLoaded("backpacked")) {
-                    if (playerCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem backpackItem && savedCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem) {
-                        for (int backPackSlot = 0; backPackSlot < (backpackItem.getColumnCount() * backpackItem.getRowCount()); backPackSlot++) {
-                            ItemStack savedBackpackItem = RespawnSavePoints.getItemsFromNBT(backPackSlot, savedCuriosStack);
-                            ItemStack playerBackpackitem = RespawnSavePoints.getItemsFromNBT(backPackSlot, playerCuriosStack);
-                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
-                                serverPlayer.drop(playerBackpackitem, false);
-                            if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
-                                RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, ItemStack.EMPTY);
-                            if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
-                                if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
-                                    playerBackpackitem.setCount(playerBackpackitem.getCount() - savedBackpackItem.getCount());
-                                    serverPlayer.drop(playerBackpackitem, false);
+                for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                    if (ModList.get().isLoaded("curios")) {
+                        Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer).resolve();
+                        ICuriosItemHandler playerCuriosHandler = curiosApi.get();
+                        ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
+                        ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
+                        if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
+                            savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                        if (ModList.get().isLoaded("sophisticatedbackpacks")) {
+                            if (savedCuriosStack.getItem() instanceof BackpackItem && playerCuriosStack.getItem() instanceof BackpackItem) {
+                                InventoryHandler playerBackpackHandler = playerCuriosStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                                InventoryHandler savedBackpackHandler = savedCuriosStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
+                                cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
+                                playerCuriosStack.setCount(0);
+                            }
+                        }
+                        if (ModList.get().isLoaded("quark")) {
+                            if (savedCuriosStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem && playerCuriosStack.getItem() instanceof org.violetmoon.quark.addons.oddities.item.BackpackItem) {
+                                ProxiedItemStackHandler playerBackpackHandler = (ProxiedItemStackHandler) playerCuriosStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
+                                ProxiedItemStackHandler savedBackpackHandler = (ProxiedItemStackHandler) savedCuriosStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
+                                cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
+                                playerCuriosStack.setCount(0);
+                            }
+                        }
+                        if (ModList.get().isLoaded("backpacked")) {
+                            if (playerCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem backpackItem && savedCuriosStack.getItem() instanceof com.mrcrayfish.backpacked.item.BackpackItem) {
+                                for (int backPackSlot = 0; backPackSlot < (backpackItem.getColumnCount() * backpackItem.getRowCount()); backPackSlot++) {
+                                    ItemStack savedBackpackItem = RespawnSavePoints.getItemsFromNBT(backPackSlot, savedCuriosStack);
+                                    ItemStack playerBackpackitem = RespawnSavePoints.getItemsFromNBT(backPackSlot, playerCuriosStack);
+                                    if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
+                                        serverPlayer.drop(playerBackpackitem, false);
+                                    if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
+                                        RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, ItemStack.EMPTY);
+                                    if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
+                                        if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
+                                            playerBackpackitem.setCount(playerBackpackitem.getCount() - savedBackpackItem.getCount());
+                                            serverPlayer.drop(playerBackpackitem, false);
+                                        }
+                                        if (playerBackpackitem.getCount() > savedBackpackItem.getCount())
+                                            savedBackpackItem.setCount(playerBackpackitem.getCount());
+                                        if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
+                                            savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
+                                    } else {
+                                        serverPlayer.drop(playerBackpackitem, false);
+                                    }
                                 }
-                                if (playerBackpackitem.getCount() > savedBackpackItem.getCount())
-                                    savedBackpackItem.setCount(playerBackpackitem.getCount());
-                                if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
-                                    savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
-                            } else {
-                                serverPlayer.drop(playerBackpackitem, false);
+                                playerCuriosStack.setCount(0);
                             }
+                            respawnPoint.setChanged();
                         }
-                        playerCuriosStack.setCount(0);
                     }
-                    respawnPoint.setChanged();
-                }
                 }
             }
         }
@@ -283,7 +283,7 @@ public class RespawnSavePoints {
 
     @SubscribeEvent
     public void onDropXP(LivingExperienceDropEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && Config.COMMON.saveXP.get()) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.getRespawnPosition() != null && Config.COMMON.saveXP.get()) {
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
             if (savedPlayerInventory == null) return;
             event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
