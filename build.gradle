@@ -3,7 +3,7 @@ plugins {
     id 'eclipse'
     id 'idea'
     id 'maven-publish'
-    id 'net.neoforged.gradle.userdev' version '7.0.105'
+    id 'net.neoforged.gradle.userdev' version '7.0.140'
 }
 
 version = mod_version + '-' + minecraft_version
@@ -74,7 +74,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
-    implementation "curse.maven:curios-309927:5414113"
+ //   implementation "curse.maven:curios-309927:5414113"
 }
 
 repositories {

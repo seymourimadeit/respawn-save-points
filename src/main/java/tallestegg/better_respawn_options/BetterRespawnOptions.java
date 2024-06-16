@@ -1,25 +1,16 @@
 package tallestegg.better_respawn_options;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.ContainerHelper;
-import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.BundleContents;
-import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
@@ -31,7 +22,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -49,17 +39,14 @@ import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
 import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
 import tallestegg.better_respawn_options.data_attachments.BROData;
 import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
-import top.theillusivec4.curios.api.CuriosApi;
-import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(BetterRespawnOptions.MODID)
 public class BetterRespawnOptions {
-    public static final String MODID = "better_respawn_options";
+    public static final String MODID = "respawn_save_points";
 
     public BetterRespawnOptions(IEventBus modEventBus, Dist dist, ModContainer container) {
         modEventBus.addListener(this::commonSetup);
@@ -85,15 +72,8 @@ public class BetterRespawnOptions {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
                 Inventory inventory = serverPlayer.getInventory();
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
+                    System.out.println(savedPlayerInventory.getStackInSlot(i).copy());
                     inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
-                }
-                if (ModList.get().isLoaded("curios")) {
-                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
-                    if (curiosApi.isPresent()) {
-                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
-                            curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
-                        }
-                    }
                 }
                 if (Config.COMMON.saveXP.get()) {
                     serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
@@ -107,74 +87,74 @@ public class BetterRespawnOptions {
 
     @SubscribeEvent
     public void onDead(LivingDeathEvent event) {
-
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.getRespawnPosition() != null && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get())) {
-            SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
-            BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
-            for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
-                ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
-                ItemStack playerStack = serverPlayer.getInventory().getItem(i);
-                if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
-                    savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
-                    BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
-                    BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
-                    if (bundleItemList.items.isEmpty() && !savedBundleItemList.items.isEmpty()) {
-                        savedBundleItemList.clearItems();
-                        savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
-                    }
-                    for (int bundleSlot = 0; bundleSlot < bundleItemList.items.size(); bundleSlot++) {
-                        ItemStack bundleItem = bundleItemList.items.get(bundleSlot);
-                        ItemStack savedBundleItem = savedBundleItemList.items.get(bundleSlot);
-                        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
-                            serverPlayer.drop(bundleItem, false);
-                        if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
-                            if (bundleItem.getCount() > savedBundleItem.getCount()) {
-                                bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.getRespawnPosition() != null) {
+            if (serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()) != null && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get())) {
+                SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
+                BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
+                for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
+                    ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
+                    ItemStack playerStack = serverPlayer.getInventory().getItem(i);
+                    if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
+                        savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                    if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
+                        BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
+                        BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
+                        if (bundleItemList.items.isEmpty() && !savedBundleItemList.items.isEmpty()) {
+                            savedBundleItemList.clearItems();
+                            savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
+                        }
+                        for (int bundleSlot = 0; bundleSlot < bundleItemList.items.size(); bundleSlot++) {
+                            ItemStack bundleItem = bundleItemList.items.get(bundleSlot);
+                            ItemStack savedBundleItem = savedBundleItemList.items.get(bundleSlot);
+                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
+                                serverPlayer.drop(bundleItem, false);
+                            if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
+                                if (bundleItem.getCount() > savedBundleItem.getCount()) {
+                                    bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
+                                    serverPlayer.drop(bundleItem, false);
+                                }
+                                if (bundleItem.getCount() < savedBundleItem.getCount())
+                                    savedBundleItem.setCount(bundleItem.getCount());
+                                if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
+                                    savedBundleItem.setDamageValue(bundleItem.getDamageValue());
+                            } else {
                                 serverPlayer.drop(bundleItem, false);
                             }
-                            if (bundleItem.getCount() < savedBundleItem.getCount())
-                                savedBundleItem.setCount(bundleItem.getCount());
-                            if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
-                                savedBundleItem.setDamageValue(bundleItem.getDamageValue());
-                        } else {
-                            serverPlayer.drop(bundleItem, false);
+                            playerStack.setCount(0);
                         }
-                        playerStack.setCount(0);
                     }
-                }
-                if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
-                    if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
-                        ComponentItemHandler shulkerContainerList = (ComponentItemHandler) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
-                        ComponentItemHandler savedShulkerContainerList = (ComponentItemHandler) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
-                        for (int shulkerSlot = 0; shulkerSlot < savedShulkerContainerList.getSlots(); shulkerSlot++) {
-                            ItemStack shulkerItem = shulkerContainerList.getStackInSlot(shulkerSlot);
-                            ItemStack savedShulkerItem = savedShulkerContainerList.getStackInSlot(shulkerSlot);
-                            if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
-                                savedShulkerContainerList.setStackInSlot(shulkerSlot, ItemStack.EMPTY);
-                            }
-                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(shulkerItem.getItem()).toString()))
-                                serverPlayer.drop(shulkerItem, false);
-                            if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
-                                if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
-                                    shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                    if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
+                        if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
+                            ComponentItemHandler shulkerContainerList = (ComponentItemHandler) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
+                            ComponentItemHandler savedShulkerContainerList = (ComponentItemHandler) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
+                            for (int shulkerSlot = 0; shulkerSlot < savedShulkerContainerList.getSlots(); shulkerSlot++) {
+                                ItemStack shulkerItem = shulkerContainerList.getStackInSlot(shulkerSlot);
+                                ItemStack savedShulkerItem = savedShulkerContainerList.getStackInSlot(shulkerSlot);
+                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
+                                    savedShulkerContainerList.setStackInSlot(shulkerSlot, ItemStack.EMPTY);
+                                }
+                                if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(shulkerItem.getItem()).toString()))
+                                    serverPlayer.drop(shulkerItem, false);
+                                if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
+                                    if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
+                                        shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
+                                        serverPlayer.drop(shulkerItem, false);
+                                    }
+                                    if (shulkerItem.getCount() < savedShulkerItem.getCount()) {
+                                        savedShulkerItem.setCount(shulkerItem.getCount());
+                                    }
+                                    if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
+                                        savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
+                                } else {
                                     serverPlayer.drop(shulkerItem, false);
                                 }
-                                if (shulkerItem.getCount() < savedShulkerItem.getCount()) {
-                                    savedShulkerItem.setCount(shulkerItem.getCount());
-                                }
-                                if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
-                                    savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
-                            } else {
-                                serverPlayer.drop(shulkerItem, false);
                             }
+                            playerStack.setCount(-1);
                         }
-                        playerStack.setCount(-1);
+                        respawnPoint.setChanged();
                     }
-                    respawnPoint.setChanged();
                 }
-            }
-            for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+        /*    for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                 if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer);
                     ICuriosItemHandler playerCuriosHandler = curiosApi.orElse(null);
@@ -185,6 +165,7 @@ public class BetterRespawnOptions {
                     if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
                         savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
                 }
+            }*/
             }
         }
     }
@@ -206,7 +187,7 @@ public class BetterRespawnOptions {
                     event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                 }
-                for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+           /*     for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                     ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
                     event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
@@ -215,14 +196,14 @@ public class BetterRespawnOptions {
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
-                }
+                }*/
             }
         }
     }
 
     @SubscribeEvent
     public void onDropXP(LivingExperienceDropEvent event) {
-        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.getRespawnPosition() != null && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get()) && Config.COMMON.saveXP.get()) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer && serverPlayer.getRespawnPosition() != null && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()) != null && serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()).hasData(BROData.SAVED_INVENTORY.get()) && Config.COMMON.saveXP.get()) {
             SavedPlayerInventory savedPlayerInventory = getSavedInventory(serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition()));
             event.setDroppedExperience(serverPlayer.totalExperience - savedPlayerInventory.getTotalExperience());
         }
@@ -244,7 +225,7 @@ public class BetterRespawnOptions {
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
                 List<String> itemsNotSaved = new ArrayList<>();
-                if (ModList.get().isLoaded("curios")) {
+             /*   if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
                     if (curiosApi.isPresent()) {
                         savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
@@ -255,7 +236,7 @@ public class BetterRespawnOptions {
                             savedPlayerInventory.setCuriosStackInSlot(i, curiosItemToBeSaved.copy());
                         }
                     }
-                }
+                }*/
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack inventoryItemToBeSaved = inventory.getItem(i);
                     if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(inventoryItemToBeSaved.getItem()).toString()))
