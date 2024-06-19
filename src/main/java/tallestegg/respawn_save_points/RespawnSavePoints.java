@@ -95,7 +95,8 @@ public class RespawnSavePoints {
                 if (savedPlayerInventory != null) {
                     Inventory inventory = serverPlayer.getInventory();
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
-                        savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
+                        if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
+                            savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
                         inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
                     }
                     if (ModList.get().isLoaded("curios")) {
