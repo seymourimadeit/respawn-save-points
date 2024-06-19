@@ -8,6 +8,8 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.NotNull;
 import tallestegg.better_respawn_options.Config;
@@ -64,13 +66,13 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()))
+        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) && !EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP))
             this.curiosItems.set(slot, stack);
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()))
+        if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) && !EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP))
             super.setStackInSlot(slot, stack);
     }
 
