@@ -8,6 +8,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
@@ -69,13 +70,13 @@ public class SavedPlayerInventory extends ItemStackHandler {
     }
 
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()))
+        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()) && !EnchantmentHelper.hasVanishingCurse(stack))
             this.curiosItems.set(slot, stack);
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
-        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()))
+        if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()) && !EnchantmentHelper.hasVanishingCurse(stack))
             super.setStackInSlot(slot, stack);
     }
 

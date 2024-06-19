@@ -26,6 +26,7 @@ public class Config {
         public final ForgeConfigSpec.ConfigValue<List<? extends String>> itemBlacklist;
         public final ForgeConfigSpec.BooleanValue excludedItemsMessage;
         public final ForgeConfigSpec.BooleanValue includedItemsMessage;
+        public final ForgeConfigSpec.DoubleValue percentageOfItemsKept;
 
         public CommonConfig(ForgeConfigSpec.Builder builder) {
             builder.push("additional options");
@@ -34,6 +35,7 @@ public class Config {
             itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
             includedItemsMessage = builder.define("Show saved items message", true);
             excludedItemsMessage = builder.define("Show excluded items message", true);
+            percentageOfItemsKept = builder.defineInRange("% of items kept after dying", 1.0F, Double.MIN_VALUE, Double.MAX_VALUE);
             builder.pop();
         }
     }

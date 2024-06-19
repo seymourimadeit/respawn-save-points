@@ -17,6 +17,9 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.BindingCurseEnchantment;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
@@ -59,7 +62,9 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
 @Mod(RespawnSavePoints.MODID)
@@ -87,24 +92,26 @@ public class RespawnSavePoints {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory == null) return;
-                Inventory inventory = serverPlayer.getInventory();
-                for (int i = 0; i < inventory.getContainerSize(); i++) {
-                    inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
-                }
-                if (ModList.get().isLoaded("curios")) {
-                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
-                    if (curiosApi.isPresent()) {
-                        for (int i = 0; i < curiosApi.get().getSlots(); i++) {
-                            curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
+                if (savedPlayerInventory != null) {
+                    Inventory inventory = serverPlayer.getInventory();
+                    for (int i = 0; i < inventory.getContainerSize(); i++) {
+                        savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
+                        inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
+                    }
+                    if (ModList.get().isLoaded("curios")) {
+                        Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
+                        if (curiosApi.isPresent()) {
+                            for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                                curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
+                            }
                         }
                     }
-                }
-                if (Config.COMMON.saveXP.get()) {
-                    serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
-                    serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
-                    serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
-                    serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                    if (Config.COMMON.saveXP.get()) {
+                        serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
+                        serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
+                        serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
+                        serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                    }
                 }
             }
         }
@@ -267,6 +274,10 @@ public class RespawnSavePoints {
                         event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
                     event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
                     event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                    if (EnchantmentHelper.hasBindingCurse(stack)) {
+                        Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(stack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                        EnchantmentHelper.setEnchantments(map, stack);
+                    }
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                 }
                 for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
