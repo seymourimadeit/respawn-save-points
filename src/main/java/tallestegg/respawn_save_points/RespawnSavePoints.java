@@ -117,6 +117,8 @@ public class RespawnSavePoints {
                 BlockEntity respawnPoint = serverPlayer.level().getBlockEntity(serverPlayer.getRespawnPosition());
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(respawnPoint);
                 for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
+                    if (savedPlayerInventory == null)
+                        return;
                     ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
                     ItemStack playerStack = serverPlayer.getInventory().getItem(i);
                     if (!savedStack.isEmpty() && playerStack.isEmpty())
