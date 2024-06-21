@@ -1,0 +1,3 @@
+- Fix potential item dupe glitch
+- Put bundles in item blacklist by default
+    - Will be added back in once better solution is found
