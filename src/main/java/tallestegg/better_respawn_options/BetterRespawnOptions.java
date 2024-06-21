@@ -102,7 +102,7 @@ public class BetterRespawnOptions {
                 for (int i = 0; i < serverPlayer.getInventory().getContainerSize(); i++) {
                     ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
                     ItemStack playerStack = serverPlayer.getInventory().getItem(i);
-                    if (!savedPlayerInventory.getStackInSlot(i).isEmpty() && serverPlayer.getInventory().getItem(i).isEmpty())
+                    if (!savedStack.isEmpty() && playerStack.isEmpty() || !ItemStack.isSameItem(playerStack, savedStack))
                         savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
                     if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                         BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
@@ -111,7 +111,8 @@ public class BetterRespawnOptions {
                             savedBundleItemList.clearItems();
                             savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
                         }
-                        for (int bundleSlot = 0; bundleSlot < bundleItemList.items.size(); bundleSlot++) {
+                        int limiter = Math.min(bundleItemList.items.size(), savedBundleItemList.items.size());
+                        for (int bundleSlot = 0; bundleSlot < limiter; bundleSlot++) {
                             ItemStack bundleItem = bundleItemList.items.get(bundleSlot);
                             ItemStack savedBundleItem = savedBundleItemList.items.get(bundleSlot);
                             if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
@@ -126,6 +127,8 @@ public class BetterRespawnOptions {
                                 if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
                                     savedBundleItem.setDamageValue(bundleItem.getDamageValue());
                             } else {
+                                savedBundleItemList.items.remove(bundleSlot);
+                                savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
                                 serverPlayer.drop(bundleItem, false);
                             }
                             playerStack.setCount(0);
@@ -138,7 +141,7 @@ public class BetterRespawnOptions {
                             for (int shulkerSlot = 0; shulkerSlot < savedShulkerContainerList.getSlots(); shulkerSlot++) {
                                 ItemStack shulkerItem = shulkerContainerList.getStackInSlot(shulkerSlot);
                                 ItemStack savedShulkerItem = savedShulkerContainerList.getStackInSlot(shulkerSlot);
-                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty()) {
+                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty() || !ItemStack.isSameItem(savedShulkerItem, shulkerItem)) {
                                     savedShulkerContainerList.setStackInSlot(shulkerSlot, ItemStack.EMPTY);
                                 }
                                 if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(shulkerItem.getItem()).toString()))
@@ -185,18 +188,22 @@ public class BetterRespawnOptions {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
                 Inventory inventory = serverPlayer.getInventory();
-                for (int i = 0; i < inventory.getContainerSize(); i++) {
-                    ItemStack stack = savedPlayerInventory.getStackInSlot(i);
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                    if (Config.COMMON.transferDurability.get())
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                    event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                    event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
-                    EnchantmentHelper.updateEnchantments(
-                            stack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
-                    );
-                    level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                if (Config.COMMON.itemDrops.get()) {
+                    for (int i = 0; i < inventory.getContainerSize(); i++) {
+                        ItemStack stack = savedPlayerInventory.getStackInSlot(i);
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
+                        if (Config.COMMON.transferDurability.get())
+                            event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                        event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
+                        event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                        EnchantmentHelper.updateEnchantments(
+                                stack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
+                        );
+                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                    }
+                } else {
+                    event.setCanceled(true);
                 }
            /*     for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                     ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);

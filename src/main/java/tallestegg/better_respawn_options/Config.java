@@ -22,6 +22,7 @@ public class Config {
         public final ModConfigSpec.ConfigValue<List<? extends String>> itemBlacklist;
         public final ModConfigSpec.BooleanValue excludedItemsMessage;
         public final ModConfigSpec.BooleanValue includedItemsMessage;
+        public final ModConfigSpec.BooleanValue itemDrops;
         public final ModConfigSpec.DoubleValue percentageOfItemsKept;
 
 
@@ -29,10 +30,11 @@ public class Config {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
             transferDurability = builder.define("Transfer lost durability", true);
-            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
+            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box", "minecraft:bundle"), obj -> true);
             includedItemsMessage = builder.define("Show saved items message", true);
             excludedItemsMessage = builder.define("Show excluded items message", true);
             percentageOfItemsKept = builder.defineInRange("% of items kept after dying", 1.0F, Double.MIN_VALUE, Double.MAX_VALUE);
+            itemDrops = builder.define("Drop items still", true);
             builder.pop();
         }
     }
