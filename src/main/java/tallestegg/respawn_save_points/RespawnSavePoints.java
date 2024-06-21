@@ -129,7 +129,7 @@ public class RespawnSavePoints {
                         return;
                     ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
                     ItemStack playerStack = serverPlayer.getInventory().getItem(i);
-                    if (!savedStack.isEmpty() && playerStack.isEmpty())
+                    if (!savedStack.isEmpty() && playerStack.isEmpty() || !ItemStack.isSameItem(playerStack, savedStack))
                         savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
                     if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                         for (int bundleSlot = 0; bundleSlot < 64; bundleSlot++) {
@@ -209,7 +209,7 @@ public class RespawnSavePoints {
                         ICuriosItemHandler playerCuriosHandler = curiosApi.get();
                         ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
                         ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
-                        if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
+                        if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty() || !ItemStack.isSameItem(savedCuriosStack, playerCuriosStack))
                             savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
                         if (ModList.get().isLoaded("sophisticatedbackpacks")) {
                             if (savedCuriosStack.getItem() instanceof BackpackItem && playerCuriosStack.getItem() instanceof BackpackItem) {
@@ -234,7 +234,7 @@ public class RespawnSavePoints {
                                     ItemStack playerBackpackitem = RespawnSavePoints.getItemsFromNBT(backPackSlot, playerCuriosStack);
                                     if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.containsKey(ResourceLocation.tryParse(playerBackpackitem.getItem().toString()))))
                                         serverPlayer.drop(playerBackpackitem, false);
-                                    if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
+                                    if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty() || !ItemStack.isSameItem(playerBackpackitem, savedBackpackItem))
                                         RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, ItemStack.EMPTY);
                                     if (ItemStack.isSameItem(playerBackpackitem, savedBackpackItem)) {
                                         if (playerBackpackitem.getCount() > savedBackpackItem.getCount()) {
@@ -264,32 +264,36 @@ public class RespawnSavePoints {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
             Level level = serverPlayer.level();
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
-                SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory == null) return;
-                Inventory inventory = serverPlayer.getInventory();
-                for (int i = 0; i < inventory.getContainerSize(); i++) {
-                    ItemStack stack = savedPlayerInventory.getStackInSlot(i);
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                    if (Config.COMMON.transferDurability.get())
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                    event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                    event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
-                    if (EnchantmentHelper.hasBindingCurse(stack)) {
-                        Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(stack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-                        EnchantmentHelper.setEnchantments(map, stack);
+                if (Config.COMMON.itemDrops.get()) {
+                    SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
+                    if (savedPlayerInventory == null) return;
+                    Inventory inventory = serverPlayer.getInventory();
+                    for (int i = 0; i < inventory.getContainerSize(); i++) {
+                        ItemStack stack = savedPlayerInventory.getStackInSlot(i);
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
+                        if (Config.COMMON.transferDurability.get())
+                            event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                        event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
+                        event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                        if (EnchantmentHelper.hasBindingCurse(stack)) {
+                            Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(stack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                            EnchantmentHelper.setEnchantments(map, stack);
+                        }
+                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                     }
-                    level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
-                }
-                for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
-                    ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                    if (Config.COMMON.transferDurability.get())
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                    event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                    event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
-                    level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                    for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                        ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
+                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
+                        if (Config.COMMON.transferDurability.get())
+                            event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
+                        event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
+                        event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                    }
+                } else {
+                    event.setCanceled(true);
                 }
             }
         }
@@ -432,7 +436,7 @@ public class RespawnSavePoints {
         for (int backPackSlot = 0; backPackSlot < inventorySize; backPackSlot++) {
             ItemStack savedBackpackItem = savedCap.getStackInSlot(backPackSlot);
             ItemStack playerBackpackitem = playerCap.getStackInSlot(backPackSlot);
-            if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty())
+            if (playerBackpackitem.isEmpty() && !savedBackpackItem.isEmpty() || !ItemStack.isSameItem(savedBackpackItem, playerBackpackitem))
                 savedBackpackItem.setCount(0);
             if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(playerBackpackitem.getItem()).toString()))
                 player.drop(playerBackpackitem, false);
