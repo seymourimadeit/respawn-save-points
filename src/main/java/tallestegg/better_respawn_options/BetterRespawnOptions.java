@@ -75,7 +75,7 @@ public class BetterRespawnOptions {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory != null) {
+                if (savedPlayerInventory != null && savedPlayerInventory.getUuid().equals(savedPlayerInventory.getUuid())) {
                     Inventory inventory = serverPlayer.getInventory();
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
                         if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)

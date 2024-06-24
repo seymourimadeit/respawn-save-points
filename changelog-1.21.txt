@@ -1,3 +1,2 @@
-- Fix potential item dupe glitch
-- Put bundles in item blacklist by default
-    - Will be added back in once better solution is found
+- Added option to transfer unsaved item data to saved item data
+    - For example, if you enchanted an iron sword during an adventure, the enchantment data is transferred to your saved inventory.
