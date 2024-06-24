@@ -146,6 +146,8 @@ public class RespawnSavePoints {
                                     savedBundleItem.setCount(bundleItem.getCount());
                                 if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
                                     savedBundleItem.setDamageValue(bundleItem.getDamageValue());
+                                if (Config.COMMON.transferData.get() && !ItemStack.isSameItemSameTags(bundleItem, savedBundleItem))
+                                    savedBundleItem.setTag(bundleItem.getTag());
                             } else {
                                 serverPlayer.drop(bundleItem, false);
                             }
@@ -190,6 +192,8 @@ public class RespawnSavePoints {
                                         savedShulkerItem.setCount(shulkerItem.getCount());
                                     if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
                                         savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
+                                    if (Config.COMMON.transferData.get() && !ItemStack.isSameItemSameTags(shulkerItem, savedShulkerItem))
+                                        savedShulkerItem.setTag(shulkerItem.getTag());
                                 } else {
                                     serverPlayer.drop(shulkerItem, false);
                                 }
@@ -243,6 +247,8 @@ public class RespawnSavePoints {
                                             savedBackpackItem.setCount(playerBackpackitem.getCount());
                                         if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
                                             savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
+                                        if (Config.COMMON.transferData.get() && !ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem))
+                                            savedBackpackItem.setTag(playerBackpackitem.getTag());
                                     } else {
                                         serverPlayer.drop(playerBackpackitem, false);
                                     }
@@ -432,6 +438,8 @@ public class RespawnSavePoints {
                     savedBackpackItem.setCount(playerBackpackitem.getCount());
                 if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
                     savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
+                if (Config.COMMON.transferData.get() && !ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem))
+                    savedBackpackItem.setTag(playerBackpackitem.getTag());
             } else {
                 player.drop(playerBackpackitem, false);
             }
