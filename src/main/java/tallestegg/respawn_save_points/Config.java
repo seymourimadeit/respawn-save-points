@@ -27,12 +27,14 @@ public class Config {
         public final ForgeConfigSpec.BooleanValue excludedItemsMessage;
         public final ForgeConfigSpec.BooleanValue includedItemsMessage;
         public final ForgeConfigSpec.BooleanValue itemDrops;
+        public final ForgeConfigSpec.BooleanValue transferData;
         public final ForgeConfigSpec.DoubleValue percentageOfItemsKept;
 
         public CommonConfig(ForgeConfigSpec.Builder builder) {
             builder.push("additional options");
             saveXP = builder.define("Save xp along with inventory", true);
             transferDurability = builder.define("Transfer lost durability", true);
+            transferData = builder.define("Transfer all item data to unsaved items of the same type as their saved counterpart", true);
             itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box", "minecraft:bundle"), obj -> true);
             includedItemsMessage = builder.define("Show saved items message", true);
             excludedItemsMessage = builder.define("Show excluded items message", true);

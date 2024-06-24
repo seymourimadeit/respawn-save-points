@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -60,10 +61,7 @@ import tallestegg.respawn_save_points.capablities.SavedPlayerInventory;
 import top.theillusivec4.curios.api.CuriosApi;
 import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
@@ -92,7 +90,7 @@ public class RespawnSavePoints {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory != null) {
+                if (savedPlayerInventory != null && savedPlayerInventory.getUuid().equals(serverPlayer.getUUID())) {
                     Inventory inventory = serverPlayer.getInventory();
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
                         if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
@@ -270,27 +268,11 @@ public class RespawnSavePoints {
                     Inventory inventory = serverPlayer.getInventory();
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
                         ItemStack stack = savedPlayerInventory.getStackInSlot(i);
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                        if (Config.COMMON.transferDurability.get())
-                            event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                        event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                        event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
-                        if (EnchantmentHelper.hasBindingCurse(stack)) {
-                            Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(stack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-                            EnchantmentHelper.setEnchantments(map, stack);
-                        }
-                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                        removeAndModifyDroppedItems(event.getDrops(), serverPlayer, stack, level);
                     }
                     for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                         ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
-                        if (Config.COMMON.transferDurability.get())
-                            event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                        event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                        event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
-                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                        removeAndModifyDroppedItems(event.getDrops(), serverPlayer, stack, level);
                     }
                 } else {
                     event.setCanceled(true);
@@ -356,6 +338,7 @@ public class RespawnSavePoints {
                     serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.saved"));
                 if (!itemsNotSaved.isEmpty() && Config.COMMON.excludedItemsMessage.get())
                     serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.not_saved", ArrayUtils.toString(itemsNotSaved)));
+                savedPlayerInventory.setUuid(serverPlayer.getUUID());
                 level.getBlockEntity(blockPos).setChanged();
                 itemsNotSaved.clear();
             }
@@ -454,5 +437,23 @@ public class RespawnSavePoints {
             }
             playerCap.setStackInSlot(backPackSlot, savedBackpackItem);
         }
+    }
+
+    public static void removeAndModifyDroppedItems(Collection<ItemEntity> drops, ServerPlayer player, ItemStack savedStack, Level level) {
+        drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getCount() < savedStack.getCount()).ifPresent(itemEntity -> savedStack.setCount(itemEntity.getItem().getCount()));
+        drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getCount() > savedStack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - savedStack.getCount()));
+        if (Config.COMMON.transferDurability.get()) {
+            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() > savedStack.getDamageValue()).ifPresent(itemEntity -> savedStack.setDamageValue(itemEntity.getItem().getDamageValue()));
+            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() < savedStack.getDamageValue()).ifPresent(itemEntity -> savedStack.setDamageValue(itemEntity.getItem().getDamageValue()));
+        }
+        drops.removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() > savedStack.getDamageValue());
+        if (Config.COMMON.transferData.get())
+            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && !ItemStack.isSameItemSameTags(savedStack, itemEntity.getItem())).ifPresent(itemEntity -> savedStack.setTag(itemEntity.getItem().getTag()));
+        drops.removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), savedStack));
+        if (EnchantmentHelper.hasBindingCurse(savedStack)) {
+            Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(savedStack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            EnchantmentHelper.setEnchantments(map, savedStack);
+        }
+        level.getBlockEntity(player.getRespawnPosition()).setChanged();
     }
 }
