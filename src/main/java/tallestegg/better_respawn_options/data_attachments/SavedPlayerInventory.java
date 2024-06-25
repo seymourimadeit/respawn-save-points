@@ -47,7 +47,8 @@ public class SavedPlayerInventory extends ItemStackHandler {
         nbt.putInt("TotalExperience", this.getTotalExperience());
         nbt.putInt("PlayerScore", this.getPlayerScore());
         nbt.putFloat("ExperienceProgress", this.getExperienceProgress());
-        nbt.putUUID("SavedUUID", this.getUuid());
+        if (this.getUuid() != null)
+            nbt.putUUID("SavedUUID", this.getUuid());
         return nbt;
     }
 
@@ -58,7 +59,8 @@ public class SavedPlayerInventory extends ItemStackHandler {
         this.setTotalExperience(nbt.getInt("TotalExperience"));
         this.setExperienceProgress(nbt.getFloat("ExperienceProgress"));
         this.setPlayerScore(nbt.getInt("PlayerScore"));
-        this.setUuid(nbt.getUUID("SavedUUID"));
+        if (nbt.hasUUID("SavedUUID"))
+            this.setUuid(nbt.getUUID("SavedUUID"));
         this.curiosItems = NonNullList.withSize((nbt.contains("CuriosSize", Tag.TAG_INT) ? nbt.getInt("CuriosSize") : this.curiosItems.size()), ItemStack.EMPTY);
         ListTag tagList = nbt.getList("CuriosItems", Tag.TAG_COMPOUND);
         for (int i = 0; i < tagList.size(); i++) {

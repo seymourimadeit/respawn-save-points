@@ -75,18 +75,20 @@ public class BetterRespawnOptions {
         if (player instanceof ServerPlayer serverPlayer && !event.isEndConquered()) {
             if (serverPlayer.getRespawnPosition() != null && (level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof BedBlockEntity || level.getBlockEntity(serverPlayer.getRespawnPosition()) instanceof RespawnAnchorBlockEntity)) {
                 SavedPlayerInventory savedPlayerInventory = getSavedInventory(level.getBlockEntity(serverPlayer.getRespawnPosition()));
-                if (savedPlayerInventory != null && savedPlayerInventory.getUuid().equals(savedPlayerInventory.getUuid())) {
-                    Inventory inventory = serverPlayer.getInventory();
-                    for (int i = 0; i < inventory.getContainerSize(); i++) {
-                        if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
-                            savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
-                        inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
-                    }
-                    if (Config.COMMON.saveXP.get()) {
-                        serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
-                        serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
-                        serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
-                        serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                if (savedPlayerInventory != null) {
+                    if (savedPlayerInventory.getUuid() != null && serverPlayer.getUUID().equals(savedPlayerInventory.getUuid())) {
+                        Inventory inventory = serverPlayer.getInventory();
+                        for (int i = 0; i < inventory.getContainerSize(); i++) {
+                            if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
+                                savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
+                            inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
+                        }
+                        if (Config.COMMON.saveXP.get()) {
+                            serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
+                            serverPlayer.experienceProgress = savedPlayerInventory.getExperienceProgress();
+                            serverPlayer.totalExperience = savedPlayerInventory.getTotalExperience();
+                            serverPlayer.setScore(savedPlayerInventory.getPlayerScore());
+                        }
                     }
                 }
             }
@@ -266,6 +268,7 @@ public class BetterRespawnOptions {
                 if (!itemsNotSaved.isEmpty() && Config.COMMON.excludedItemsMessage.get())
                     serverPlayer.sendSystemMessage(Component.translatable("message.respawn_save_points.not_saved", ArrayUtils.toString(itemsNotSaved)));
                 level.getBlockEntity(blockPos).setChanged();
+                savedPlayerInventory.setUuid(serverPlayer.getUUID());
                 itemsNotSaved.clear();
             }
         }
@@ -283,8 +286,11 @@ public class BetterRespawnOptions {
             drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() < savedStack.getDamageValue()).ifPresent(itemEntity -> savedStack.setDamageValue(itemEntity.getItem().getDamageValue()));
         }
         drops.removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() > savedStack.getDamageValue());
-        if (Config.COMMON.transferData.get())
+        if (Config.COMMON.transferData.get()) {
             drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && !ItemStack.isSameItemSameComponents(savedStack, itemEntity.getItem())).ifPresent(itemEntity -> savedStack.applyComponents(itemEntity.getItem().getComponents()));
+        } else {
+            drops.removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && !ItemStack.isSameItemSameComponents(savedStack, itemEntity.getItem()));
+        }
         drops.removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), savedStack));
         EnchantmentHelper.updateEnchantments(
                 savedStack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
