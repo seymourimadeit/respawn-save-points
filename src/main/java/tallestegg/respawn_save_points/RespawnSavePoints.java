@@ -171,7 +171,6 @@ public class RespawnSavePoints {
                             ProxiedItemStackHandler playerBackpackHandler = (ProxiedItemStackHandler) playerStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
                             ProxiedItemStackHandler savedBackpackHandler = (ProxiedItemStackHandler) savedStack.getCapability(ForgeCapabilities.ITEM_HANDLER).orElseGet(null);
                             cycleInventoryOnDeathCaps(savedBackpackHandler, playerBackpackHandler, playerBackpackHandler.getSlots(), serverPlayer);
-                            playerStack.setCount(0);
                         }
                     }
                     if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
@@ -259,6 +258,7 @@ public class RespawnSavePoints {
                                         if (!ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem)) {
                                             if (Config.COMMON.transferData.get()) {
                                                 savedBackpackItem.setTag(playerBackpackitem.getTag());
+                                                RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, savedBackpackItem.copy());
                                             } else {
                                                 playerBackpackitem.setCount(0);
                                             }
