@@ -158,8 +158,13 @@ public class BetterRespawnOptions {
                                     }
                                     if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
                                         savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
-                                    if (Config.COMMON.transferData.get() && !ItemStack.isSameItemSameComponents(savedShulkerItem, shulkerItem))
-                                        savedShulkerItem.applyComponents(shulkerItem.getComponents());
+                                    if (!ItemStack.isSameItemSameComponents(shulkerItem, savedShulkerItem)) {
+                                        if (Config.COMMON.transferData.get()) {
+                                            savedShulkerItem.applyComponents(shulkerItem.getComponents());
+                                        } else {
+                                            shulkerItem.setCount(0);
+                                        }
+                                    }
 
                                 } else {
                                     serverPlayer.drop(shulkerItem, false);
