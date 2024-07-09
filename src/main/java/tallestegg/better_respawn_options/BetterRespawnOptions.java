@@ -22,7 +22,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
@@ -46,6 +45,7 @@ import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
@@ -109,32 +109,21 @@ public class BetterRespawnOptions {
                     if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                         BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
                         BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
-                        if (bundleItemList.items.isEmpty() && !savedBundleItemList.items.isEmpty()) {
-                            savedBundleItemList.clearItems();
-                            savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
+                        List<ItemStack> savedItems = savedBundleItemList.items;
+                        List<ItemStack> playerItems = bundleItemList.items;
+                        List<ItemStack> savedNestedBundles = new ArrayList<>();
+                        List<ItemStack> unsavedNestedBundles = new ArrayList<>();
+                        handleNestedBundles(savedItems, savedNestedBundles);
+                        handleNestedBundles(playerItems, unsavedNestedBundles);
+                        int limiter = Math.min(savedNestedBundles.size(), unsavedNestedBundles.size());
+                        for (int slot = 0; slot < limiter; slot++) {
+                            ItemStack savedNested = savedNestedBundles.get(slot);
+                            ItemStack unSavedNested = unsavedNestedBundles.get(slot);
+                            BundleContents.Mutable savedNestedBundleItemList = new BundleContents.Mutable(savedNested.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
+                            BundleContents.Mutable unsavedNestedBundleItemList = new BundleContents.Mutable(unSavedNested.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
+                            handleBundles(serverPlayer, savedNested, unSavedNested, savedNestedBundleItemList.items, unsavedNestedBundleItemList.items, unsavedNestedBundleItemList, savedNestedBundleItemList);
                         }
-                        int limiter = Math.min(bundleItemList.items.size(), savedBundleItemList.items.size());
-                        for (int bundleSlot = 0; bundleSlot < limiter; bundleSlot++) {
-                            ItemStack bundleItem = bundleItemList.items.get(bundleSlot);
-                            ItemStack savedBundleItem = savedBundleItemList.items.get(bundleSlot);
-                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
-                                serverPlayer.drop(bundleItem, false);
-                            if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
-                                if (bundleItem.getCount() > savedBundleItem.getCount()) {
-                                    bundleItem.setCount(bundleItem.getCount() - savedBundleItem.getCount());
-                                    serverPlayer.drop(bundleItem, false);
-                                }
-                                if (bundleItem.getCount() < savedBundleItem.getCount())
-                                    savedBundleItem.setCount(bundleItem.getCount());
-                                if (bundleItem.getDamageValue() > savedBundleItem.getDamageValue())
-                                    savedBundleItem.setDamageValue(bundleItem.getDamageValue());
-                            } else {
-                                savedBundleItemList.items.remove(bundleSlot);
-                                savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
-                                serverPlayer.drop(bundleItem, false);
-                            }
-                            playerStack.setCount(0);
-                        }
+                        handleBundles(serverPlayer, savedStack, playerStack, savedItems, playerItems, bundleItemList, savedBundleItemList);
                     }
                     if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
                         if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
@@ -156,7 +145,7 @@ public class BetterRespawnOptions {
                                     if (shulkerItem.getCount() < savedShulkerItem.getCount()) {
                                         savedShulkerItem.setCount(shulkerItem.getCount());
                                     }
-                                    if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
+                                    if (shulkerItem.getDamageValue() != savedShulkerItem.getDamageValue())
                                         savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
                                     if (!ItemStack.isSameItemSameComponents(shulkerItem, savedShulkerItem)) {
                                         if (Config.COMMON.transferData.get()) {
@@ -165,7 +154,6 @@ public class BetterRespawnOptions {
                                             shulkerItem.setCount(0);
                                         }
                                     }
-
                                 } else {
                                     serverPlayer.drop(shulkerItem, false);
                                 }
@@ -282,6 +270,54 @@ public class BetterRespawnOptions {
     public static SavedPlayerInventory getSavedInventory(BlockEntity blockEntity) {
         return blockEntity.getData(BROData.SAVED_INVENTORY); // This applies even to the custom RespawnAnchorBlockEntity class for compatibility with other mods
     }
+
+    // Nested bundles do exist, so we have to account for that in the system
+    public static List<ItemStack> handleNestedBundles(List<ItemStack> bundleItemList, List<ItemStack> nestedBundles) {
+        for (ItemStack savedBundleItem : bundleItemList) {
+            if (savedBundleItem.getItem() instanceof BundleItem) {
+                nestedBundles.add(savedBundleItem);
+                BundleContents.Mutable itemList = new BundleContents.Mutable(savedBundleItem.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
+                handleNestedBundles(itemList.items, nestedBundles);
+                return nestedBundles;
+            }
+        }
+        return nestedBundles;
+    }
+
+
+    public static void handleBundleItems(List<ItemStack> savedItems, List<ItemStack> playerItems, ServerPlayer serverPlayer, ItemStack playerStack, ItemStack savedStack, BundleContents.Mutable bundleItemList, int slot) {
+        ItemStack savedBundleItem = savedItems.get(slot);
+        ItemStack bundleItem = playerItems.get(slot);
+        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
+            serverPlayer.drop(bundleItem, false);
+        if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
+            if (bundleItem.getCount() > savedBundleItem.getCount()) {
+                serverPlayer.drop(bundleItem.copyWithCount(bundleItem.getCount() - savedBundleItem.getCount()), false);
+            }
+            if (bundleItem.getCount() < savedBundleItem.getCount())
+                savedBundleItem.setCount(bundleItem.getCount());
+            if (bundleItem.getDamageValue() != savedBundleItem.getDamageValue())
+                savedBundleItem.setDamageValue(bundleItem.getDamageValue());
+        } else {
+            bundleItemList.items.remove(bundleItem);
+            playerStack.set(DataComponents.BUNDLE_CONTENTS, bundleItemList.toImmutable());
+            serverPlayer.drop(bundleItem, false);
+        }
+    }
+
+    public static void handleBundles(ServerPlayer serverPlayer, ItemStack savedStack, ItemStack playerStack, List<ItemStack> savedItems, List<ItemStack> playerItems, BundleContents.Mutable bundleItemList, BundleContents.Mutable savedBundleItemList) {
+        if (playerItems.isEmpty() && !savedItems.isEmpty()) {
+            savedBundleItemList.clearItems();
+            savedStack.set(DataComponents.BUNDLE_CONTENTS, savedBundleItemList.toImmutable());
+        } else if (!playerItems.isEmpty() && savedItems.isEmpty()) {
+            playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
+        }
+        int limiter = Math.min(playerItems.size(), savedItems.size());
+        for (int slot = 0; slot < limiter; slot++) {
+            handleBundleItems(savedItems, playerItems, serverPlayer, playerStack, savedStack, bundleItemList, slot);
+        }
+    }
+
 
     public static void removeAndModifyDroppedItems(Collection<ItemEntity> drops, ServerPlayer player, ItemStack savedStack, Level level) {
         drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getCount() < savedStack.getCount()).ifPresent(itemEntity -> savedStack.setCount(itemEntity.getItem().getCount()));
