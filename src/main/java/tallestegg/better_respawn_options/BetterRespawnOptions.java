@@ -5,7 +5,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
@@ -44,8 +43,6 @@ import tallestegg.better_respawn_options.data_attachments.BROData;
 import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
@@ -106,6 +103,25 @@ public class BetterRespawnOptions {
                     ItemStack playerStack = serverPlayer.getInventory().getItem(i);
                     if (!savedStack.isEmpty() && playerStack.isEmpty() || !ItemStack.isSameItem(playerStack, savedStack))
                         savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                    if (ItemStack.isSameItem(playerStack, savedStack)) {
+                        if (playerStack.getCount() > savedStack.getCount()) {
+                            serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
+                        }
+                        if (playerStack.getCount() < savedStack.getCount()) {
+                            savedStack.setCount(playerStack.getCount());
+                        }
+                        if (playerStack.getDamageValue() != savedStack.getDamageValue())
+                            savedStack.setDamageValue(playerStack.getDamageValue());
+                        if (!ItemStack.isSameItemSameComponents(playerStack, savedStack)) {
+                            if (Config.COMMON.transferData.get()) {
+                                savedPlayerInventory.setStackInSlot(i, playerStack.copyAndClear());
+                            } else {
+                                playerStack.setCount(0);
+                            }
+                        }
+                    }
+                    if (ItemStack.matches(savedStack, playerStack))
+                        playerStack.setCount(0);
                     if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                         BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
                         BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
@@ -189,7 +205,10 @@ public class BetterRespawnOptions {
                 if (Config.COMMON.itemDrops.get()) {
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
                         ItemStack stack = savedPlayerInventory.getStackInSlot(i);
-                        removeAndModifyDroppedItems(event.getDrops(), serverPlayer, stack, level);
+                        EnchantmentHelper.updateEnchantments(
+                                stack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
+                        );
+                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                     }
                 } else {
                     event.setCanceled(true);
@@ -318,24 +337,7 @@ public class BetterRespawnOptions {
         }
     }
 
+    public static void handleAndModifyItemDrops() {
 
-    public static void removeAndModifyDroppedItems(Collection<ItemEntity> drops, ServerPlayer player, ItemStack savedStack, Level level) {
-        drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getCount() < savedStack.getCount()).ifPresent(itemEntity -> savedStack.setCount(itemEntity.getItem().getCount()));
-        drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getCount() > savedStack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - savedStack.getCount()));
-        if (Config.COMMON.transferDurability.get()) {
-            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() > savedStack.getDamageValue()).ifPresent(itemEntity -> savedStack.setDamageValue(itemEntity.getItem().getDamageValue()));
-            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() < savedStack.getDamageValue()).ifPresent(itemEntity -> savedStack.setDamageValue(itemEntity.getItem().getDamageValue()));
-        }
-        drops.removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && itemEntity.getItem().getDamageValue() > savedStack.getDamageValue());
-        if (Config.COMMON.transferData.get()) {
-            drops.stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && !ItemStack.isSameItemSameComponents(savedStack, itemEntity.getItem())).ifPresent(itemEntity -> savedStack.applyComponents(itemEntity.getItem().getComponents()));
-        } else {
-            drops.removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), savedStack) && !ItemStack.isSameItemSameComponents(savedStack, itemEntity.getItem()));
-        }
-        drops.removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), savedStack));
-        EnchantmentHelper.updateEnchantments(
-                savedStack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
-        );
-        level.getBlockEntity(player.getRespawnPosition()).setChanged();
     }
 }
