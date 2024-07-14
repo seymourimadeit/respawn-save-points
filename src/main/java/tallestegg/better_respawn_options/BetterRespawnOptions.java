@@ -103,25 +103,6 @@ public class BetterRespawnOptions {
                     ItemStack playerStack = serverPlayer.getInventory().getItem(i);
                     if (!savedStack.isEmpty() && playerStack.isEmpty() || !ItemStack.isSameItem(playerStack, savedStack))
                         savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                    if (ItemStack.isSameItem(playerStack, savedStack)) {
-                        if (playerStack.getCount() > savedStack.getCount()) {
-                            serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
-                        }
-                        if (playerStack.getCount() < savedStack.getCount()) {
-                            savedStack.setCount(playerStack.getCount());
-                        }
-                        if (playerStack.getDamageValue() != savedStack.getDamageValue())
-                            savedStack.setDamageValue(playerStack.getDamageValue());
-                        if (!ItemStack.isSameItemSameComponents(playerStack, savedStack)) {
-                            if (Config.COMMON.transferData.get()) {
-                                savedPlayerInventory.setStackInSlot(i, playerStack.copyAndClear());
-                            } else {
-                                playerStack.setCount(0);
-                            }
-                        }
-                    }
-                    if (ItemStack.matches(savedStack, playerStack))
-                        playerStack.setCount(0);
                     if (savedStack.getItem() instanceof BundleItem && playerStack.getItem() instanceof BundleItem) {
                         BundleContents.Mutable bundleItemList = new BundleContents.Mutable(playerStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
                         BundleContents.Mutable savedBundleItemList = new BundleContents.Mutable(savedStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY));
@@ -176,8 +157,30 @@ public class BetterRespawnOptions {
                             }
                             playerStack.setCount(-1);
                         }
-                        respawnPoint.setChanged();
                     }
+                    respawnPoint.setChanged();
+                    if (ItemStack.isSameItem(playerStack, savedStack)) {
+                        if (playerStack.getCount() > savedStack.getCount()) {
+                            serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
+                        }
+                        if (playerStack.getCount() < savedStack.getCount()) {
+                            savedStack.setCount(playerStack.getCount());
+                        }
+                        if (playerStack.getDamageValue() != savedStack.getDamageValue())
+                            savedStack.setDamageValue(playerStack.getDamageValue());
+                        if (!ItemStack.isSameItemSameComponents(playerStack, savedStack)) {
+                            if (Config.COMMON.transferData.get()) {
+                                savedPlayerInventory.setStackInSlot(i, playerStack.copyAndClear());
+                            } else {
+                                playerStack.setCount(0);
+                            }
+                        }
+                    }
+                    EnchantmentHelper.updateEnchantments(
+                            savedStack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
+                    );
+                    if (ItemStack.matches(savedStack, playerStack))
+                        playerStack.setCount(0);
                 }
         /*    for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                 if (ModList.get().isLoaded("curios")) {
@@ -215,12 +218,12 @@ public class BetterRespawnOptions {
                 }
            /*     for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                     ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() < stack.getCount()).ifPresent(itemEntity -> stack.setCount(itemEntity.getItem().getCount()));
-                    event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getCount() > stack.getCount()).ifPresent(itemEntity -> itemEntity.getItem().setCount(itemEntity.getItem().getCount() - stack.getCount()));
+                    event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getCount() < stack.getCount()).ifPresent(itemStack -> stack.setCount(itemStack.getCount()));
+                    event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getCount() > stack.getCount()).ifPresent(itemStack -> itemStack.setCount(itemStack.getCount() - stack.getCount()));
                     if (Config.COMMON.transferDurability.get())
-                        event.getDrops().stream().findAny().filter(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue()).ifPresent(itemEntity -> stack.setDamageValue(itemEntity.getItem().getDamageValue()));
-                    event.getDrops().removeIf(itemEntity -> ItemStack.isSameItem(itemEntity.getItem(), stack) && itemEntity.getItem().getDamageValue() > stack.getDamageValue());
-                    event.getDrops().removeIf(itemEntity -> ItemStack.matches(itemEntity.getItem(), stack));
+                        event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getDamageValue() > stack.getDamageValue()).ifPresent(itemStack -> stack.setDamageValue(itemStack.getDamageValue()));
+                    event.getDrops().removeIf(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getDamageValue() > stack.getDamageValue());
+                    event.getDrops().removeIf(itemStack -> ItemStack.matches(itemStack, stack));
                     level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                 }*/
             }
@@ -304,23 +307,24 @@ public class BetterRespawnOptions {
     }
 
 
-    public static void handleBundleItems(List<ItemStack> savedItems, List<ItemStack> playerItems, ServerPlayer serverPlayer, ItemStack playerStack, ItemStack savedStack, BundleContents.Mutable bundleItemList, int slot) {
-        ItemStack savedBundleItem = savedItems.get(slot);
-        ItemStack bundleItem = playerItems.get(slot);
-        if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(bundleItem.getItem()).toString()))
-            serverPlayer.drop(bundleItem, false);
-        if (ItemStack.isSameItem(bundleItem, savedBundleItem)) {
-            if (bundleItem.getCount() > savedBundleItem.getCount()) {
-                serverPlayer.drop(bundleItem.copyWithCount(bundleItem.getCount() - savedBundleItem.getCount()), false);
+    public static void handleBundleItems(List<ItemStack> savedItems, List<ItemStack> playerItems, ServerPlayer serverPlayer, ItemStack playerStack) {
+        for (ItemStack savedBundled : savedItems) {
+            playerItems.stream().filter(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getCount() < savedBundled.getCount()).findAny().ifPresent(itemStack -> savedBundled.setCount(itemStack.getCount()));
+            playerItems.stream().filter(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getCount() > savedBundled.getCount()).findAny().ifPresent(itemStack -> serverPlayer.drop(itemStack.copyWithCount(itemStack.getCount() - savedBundled.getCount()), false));
+            playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getCount() > savedBundled.getCount());
+            if (Config.COMMON.transferDurability.get()) {
+                playerItems.stream().filter(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getDamageValue() != savedBundled.getDamageValue()).findAny().ifPresent(itemStack -> savedBundled.setDamageValue(itemStack.getDamageValue()));
+            } else {
+                playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getDamageValue() != savedBundled.getDamageValue());
             }
-            if (bundleItem.getCount() < savedBundleItem.getCount())
-                savedBundleItem.setCount(bundleItem.getCount());
-            if (bundleItem.getDamageValue() != savedBundleItem.getDamageValue())
-                savedBundleItem.setDamageValue(bundleItem.getDamageValue());
-        } else {
-            bundleItemList.items.remove(bundleItem);
-            playerStack.set(DataComponents.BUNDLE_CONTENTS, bundleItemList.toImmutable());
-            serverPlayer.drop(bundleItem, false);
+            if (Config.COMMON.transferData.get()) {
+                playerItems.stream().filter(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && !ItemStack.isSameItemSameComponents(savedBundled, itemStack)).findAny().ifPresent(itemStack -> savedBundled.applyComponents(itemStack.getComponents()));
+            } else {
+                playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && !ItemStack.isSameItemSameComponents(savedBundled, itemStack));
+            }
+            playerItems.removeIf(itemStack -> ItemStack.matches(itemStack, savedBundled));
+            playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
+            playerStack.setCount(0);
         }
     }
 
@@ -331,13 +335,6 @@ public class BetterRespawnOptions {
         } else if (!playerItems.isEmpty() && savedItems.isEmpty()) {
             playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         }
-        int limiter = Math.min(playerItems.size(), savedItems.size());
-        for (int slot = 0; slot < limiter; slot++) {
-            handleBundleItems(savedItems, playerItems, serverPlayer, playerStack, savedStack, bundleItemList, slot);
-        }
-    }
-
-    public static void handleAndModifyItemDrops() {
-
+        handleBundleItems(savedItems, playerItems, serverPlayer, playerStack);
     }
 }
