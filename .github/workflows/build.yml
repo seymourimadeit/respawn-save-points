@@ -31,7 +31,7 @@ jobs:
           curseforge-id: 1035335
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           files-primary: build/libs/!(*-@(javadoc|sources)).jar
-          version-type: release
+          version-type: beta
           loaders: |
             neoforge
             forge
