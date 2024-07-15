@@ -29,7 +29,7 @@ jobs:
           curseforge-id: 1035335
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           files: build/libs/!(*-@(javadoc|sources)).jar
-          version-type: release
+          version-type: beta
           loaders: neoforge
           game-versions: 1.21
           java: 21
