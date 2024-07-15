@@ -35,7 +35,7 @@ public class Config {
             saveXP = builder.define("Save xp along with inventory", true);
             transferDurability = builder.define("Transfer lost durability", true);
             transferData = builder.define("Transfer all item data to unsaved items of the same type as their saved counterpart", true);
-            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box", "minecraft:bundle"), obj -> true);
+            itemBlacklist = builder.defineList("Items that cannot be saved via beds or respawn anchors", ImmutableList.of("mekanism:cardboard_box"), obj -> true);
             includedItemsMessage = builder.define("Show saved items message", true);
             excludedItemsMessage = builder.define("Show excluded items message", true);
             percentageOfItemsKept = builder.defineInRange("% of items kept after dying", 1.0F, Double.MIN_VALUE, Double.MAX_VALUE);
