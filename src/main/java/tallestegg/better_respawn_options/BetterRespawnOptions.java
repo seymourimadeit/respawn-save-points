@@ -24,6 +24,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -41,9 +42,12 @@ import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
 import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
 import tallestegg.better_respawn_options.data_attachments.BROData;
 import tallestegg.better_respawn_options.data_attachments.SavedPlayerInventory;
+import top.theillusivec4.curios.api.CuriosApi;
+import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 // The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(BetterRespawnOptions.MODID)
@@ -79,6 +83,14 @@ public class BetterRespawnOptions {
                             if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
                                 savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
                             inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
+                        }
+                        if (ModList.get().isLoaded("curios")) {
+                            Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
+                            if (curiosApi.isPresent()) {
+                                for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                                    curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
+                                }
+                            }
                         }
                         if (Config.COMMON.saveXP.get()) {
                             serverPlayer.setExperienceLevels(savedPlayerInventory.getExperienceLevel());
@@ -158,42 +170,20 @@ public class BetterRespawnOptions {
                             playerStack.setCount(-1);
                         }
                     }
-                    respawnPoint.setChanged();
-                    if (ItemStack.isSameItem(playerStack, savedStack)) {
-                        if (playerStack.getCount() > savedStack.getCount()) {
-                            serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
-                        }
-                        if (playerStack.getCount() < savedStack.getCount()) {
-                            savedStack.setCount(playerStack.getCount());
-                        }
-                        if (playerStack.getDamageValue() != savedStack.getDamageValue())
-                            savedStack.setDamageValue(playerStack.getDamageValue());
-                        if (!ItemStack.isSameItemSameComponents(playerStack, savedStack)) {
-                            if (Config.COMMON.transferData.get()) {
-                                savedPlayerInventory.setStackInSlot(i, playerStack.copyAndClear());
-                            } else {
-                                playerStack.setCount(0);
-                            }
-                        }
+                    removeAndModifyDroppedItems(serverPlayer, savedStack, playerStack, savedPlayerInventory, i);
+                }
+                for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                    if (ModList.get().isLoaded("curios")) {
+                        Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer);
+                        ICuriosItemHandler playerCuriosHandler = curiosApi.get();
+                        ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
+                        ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
+                        if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty() || !ItemStack.isSameItem(playerCuriosStack, savedCuriosStack))
+                            savedPlayerInventory.setCuriosStackInSlot(i, ItemStack.EMPTY);
+                        removeAndModifyDroppedItems(serverPlayer, savedCuriosStack, playerCuriosStack, savedPlayerInventory, i);
                     }
-                    EnchantmentHelper.updateEnchantments(
-                            savedStack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
-                    );
-                    if (ItemStack.matches(savedStack, playerStack))
-                        playerStack.setCount(0);
                 }
-        /*    for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
-                if (ModList.get().isLoaded("curios")) {
-                    Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(serverPlayer);
-                    ICuriosItemHandler playerCuriosHandler = curiosApi.orElse(null);
-                    if (playerCuriosHandler == null)
-                        return;
-                    ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
-                    ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
-                    if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty())
-                        savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
-                }
-            }*/
+                respawnPoint.setChanged();
             }
         }
     }
@@ -213,19 +203,16 @@ public class BetterRespawnOptions {
                         );
                         level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
                     }
+                    for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
+                        ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
+                        EnchantmentHelper.updateEnchantments(
+                                stack, p_330066_ -> p_330066_.removeIf(p_344368_ -> p_344368_.is(Enchantments.BINDING_CURSE))
+                        );
+                        level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
+                    }
                 } else {
                     event.setCanceled(true);
                 }
-           /*     for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
-                    ItemStack stack = savedPlayerInventory.getCuriosStackInSlot(i);
-                    event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getCount() < stack.getCount()).ifPresent(itemStack -> stack.setCount(itemStack.getCount()));
-                    event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getCount() > stack.getCount()).ifPresent(itemStack -> itemStack.setCount(itemStack.getCount() - stack.getCount()));
-                    if (Config.COMMON.transferDurability.get())
-                        event.getDrops().stream().findAny().filter(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getDamageValue() > stack.getDamageValue()).ifPresent(itemStack -> stack.setDamageValue(itemStack.getDamageValue()));
-                    event.getDrops().removeIf(itemStack -> ItemStack.isSameItem(itemStack, stack) && itemStack.getDamageValue() > stack.getDamageValue());
-                    event.getDrops().removeIf(itemStack -> ItemStack.matches(itemStack, stack));
-                    level.getBlockEntity(serverPlayer.getRespawnPosition()).setChanged();
-                }*/
             }
         }
     }
@@ -254,7 +241,7 @@ public class BetterRespawnOptions {
                 Inventory inventory = serverPlayer.getInventory();
                 savedPlayerInventory.setSize(inventory.getContainerSize());
                 List<String> itemsNotSaved = new ArrayList<>();
-             /*   if (ModList.get().isLoaded("curios")) {
+                if (ModList.get().isLoaded("curios")) {
                     Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
                     if (curiosApi.isPresent()) {
                         savedPlayerInventory.setCuriosItemsSize(curiosApi.get().getSlots());
@@ -265,7 +252,7 @@ public class BetterRespawnOptions {
                             savedPlayerInventory.setCuriosStackInSlot(i, curiosItemToBeSaved.copy());
                         }
                     }
-                }*/
+                }
                 for (int i = 0; i < inventory.getContainerSize(); i++) {
                     ItemStack inventoryItemToBeSaved = inventory.getItem(i);
                     if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(inventoryItemToBeSaved.getItem()).toString()))
@@ -336,5 +323,27 @@ public class BetterRespawnOptions {
             playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         }
         handleBundleItems(savedItems, playerItems, serverPlayer, playerStack);
+    }
+
+    public static void removeAndModifyDroppedItems(ServerPlayer serverPlayer, ItemStack savedStack, ItemStack playerStack, SavedPlayerInventory savedPlayerInventory, int slot) {
+        if (ItemStack.isSameItem(playerStack, savedStack)) {
+            if (playerStack.getCount() > savedStack.getCount()) {
+                serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
+            }
+            if (playerStack.getCount() < savedStack.getCount()) {
+                savedStack.setCount(playerStack.getCount());
+            }
+            if (playerStack.getDamageValue() != savedStack.getDamageValue())
+                savedStack.setDamageValue(playerStack.getDamageValue());
+            if (!ItemStack.isSameItemSameComponents(playerStack, savedStack)) {
+                if (Config.COMMON.transferData.get()) {
+                    savedPlayerInventory.setStackInSlot(slot, playerStack.copyAndClear());
+                } else {
+                    playerStack.setCount(0);
+                }
+            }
+        }
+        if (ItemStack.matches(savedStack, playerStack))
+            playerStack.setCount(0);
     }
 }

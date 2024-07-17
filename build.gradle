@@ -74,7 +74,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
- //   implementation "curse.maven:curios-309927:5414113"
+    implementation "curse.maven:curios-continuation-1037991:5476603"
+    implementation "curse.maven:modular-angel-ring-1037481:5444154"
 }
 
 repositories {
