@@ -207,7 +207,7 @@ public class RespawnSavePoints {
                         ItemStack savedCuriosStack = savedPlayerInventory.getCuriosStackInSlot(i);
                         ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
                         if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty() || !ItemStack.isSameItem(savedCuriosStack, playerCuriosStack))
-                            savedPlayerInventory.setStackInSlot(i, ItemStack.EMPTY);
+                            savedPlayerInventory.setCuriosStackInSlot(i, ItemStack.EMPTY);
                         if (ModList.get().isLoaded("sophisticatedbackpacks")) {
                             if (savedCuriosStack.getItem() instanceof BackpackItem && playerCuriosStack.getItem() instanceof BackpackItem) {
                                 InventoryHandler playerBackpackHandler = playerCuriosStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).getInventoryHandler();
