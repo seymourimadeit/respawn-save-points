@@ -33,12 +33,11 @@ public class SavedPlayerInventory extends ItemStackHandler {
     public CompoundTag serializeNBT(HolderLookup.Provider provider) {
         CompoundTag nbt = super.serializeNBT(provider);
         ListTag curiosItems = new ListTag();
-        for (int i = 0; i < this.curiosItems.size(); i++) {
+        for(int i = 0; i < this.curiosItems.size(); ++i) {
             if (!this.curiosItems.get(i).isEmpty()) {
                 CompoundTag itemTag = new CompoundTag();
                 itemTag.putInt("Slot", i);
-                this.curiosItems.get(i).save(provider);
-                curiosItems.add(itemTag);
+                curiosItems.add(this.curiosItems.get(i).save(provider, itemTag));
             }
         }
         nbt.put("CuriosItems", curiosItems);
@@ -63,11 +62,13 @@ public class SavedPlayerInventory extends ItemStackHandler {
             this.setUuid(nbt.getUUID("SavedUUID"));
         this.curiosItems = NonNullList.withSize((nbt.contains("CuriosSize", Tag.TAG_INT) ? nbt.getInt("CuriosSize") : this.curiosItems.size()), ItemStack.EMPTY);
         ListTag tagList = nbt.getList("CuriosItems", Tag.TAG_COMPOUND);
-        for (int i = 0; i < tagList.size(); i++) {
+        for(int i = 0; i < tagList.size(); ++i) {
             CompoundTag itemTags = tagList.getCompound(i);
             int slot = itemTags.getInt("Slot");
             if (slot >= 0 && slot < this.curiosItems.size()) {
-                ItemStack.parse(provider, itemTags).ifPresent(stack -> this.curiosItems.set(slot, stack));
+                ItemStack.parse(provider, itemTags).ifPresent((stack) -> {
+                    this.curiosItems.set(slot, stack);
+                });
             }
         }
     }
