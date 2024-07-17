@@ -134,41 +134,39 @@ public class BetterRespawnOptions {
                         }
                         handleBundles(serverPlayer, savedStack, playerStack, savedItems, playerItems, bundleItemList, savedBundleItemList);
                     }
-                    if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
-                        if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
-                            ComponentItemHandler shulkerContainerList = (ComponentItemHandler) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
-                            ComponentItemHandler savedShulkerContainerList = (ComponentItemHandler) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
-                            for (int shulkerSlot = 0; shulkerSlot < savedShulkerContainerList.getSlots(); shulkerSlot++) {
-                                ItemStack shulkerItem = shulkerContainerList.getStackInSlot(shulkerSlot);
-                                ItemStack savedShulkerItem = savedShulkerContainerList.getStackInSlot(shulkerSlot);
-                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty() || !ItemStack.isSameItem(savedShulkerItem, shulkerItem)) {
-                                    savedShulkerContainerList.setStackInSlot(shulkerSlot, ItemStack.EMPTY);
-                                }
-                                if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(shulkerItem.getItem()).toString()))
-                                    serverPlayer.drop(shulkerItem, false);
-                                if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
-                                    if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
-                                        shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
-                                        serverPlayer.drop(shulkerItem, false);
-                                    }
-                                    if (shulkerItem.getCount() < savedShulkerItem.getCount()) {
-                                        savedShulkerItem.setCount(shulkerItem.getCount());
-                                    }
-                                    if (shulkerItem.getDamageValue() != savedShulkerItem.getDamageValue())
-                                        savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
-                                    if (!ItemStack.isSameItemSameComponents(shulkerItem, savedShulkerItem)) {
-                                        if (Config.COMMON.transferData.get()) {
-                                            savedShulkerItem.applyComponents(shulkerItem.getComponents());
-                                        } else {
-                                            shulkerItem.setCount(0);
-                                        }
-                                    }
-                                } else {
-                                    serverPlayer.drop(shulkerItem, false);
-                                }
+                    ComponentItemHandler componentItemHandlerList = (ComponentItemHandler) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
+                    ComponentItemHandler savedComponentItemHandlerList = (ComponentItemHandler) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
+                    if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
+                        for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
+                            ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
+                            ItemStack savedItem = savedComponentItemHandlerList.getStackInSlot(componentSlots);
+                            if (unSavedItem.isEmpty() && !savedItem.isEmpty() || !ItemStack.isSameItem(savedItem, unSavedItem)) {
+                                savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
                             }
-                            playerStack.setCount(-1);
+                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(unSavedItem.getItem()).toString()))
+                                serverPlayer.drop(unSavedItem, false);
+                            if (ItemStack.isSameItem(unSavedItem, savedItem)) {
+                                if (unSavedItem.getCount() > savedItem.getCount()) {
+                                    unSavedItem.setCount(unSavedItem.getCount() - savedItem.getCount());
+                                    serverPlayer.drop(unSavedItem, false);
+                                }
+                                if (unSavedItem.getCount() < savedItem.getCount()) {
+                                    savedItem.setCount(unSavedItem.getCount());
+                                }
+                                if (unSavedItem.getDamageValue() != savedItem.getDamageValue())
+                                    savedItem.setDamageValue(unSavedItem.getDamageValue());
+                                if (!ItemStack.isSameItemSameComponents(unSavedItem, savedItem)) {
+                                    if (Config.COMMON.transferData.get()) {
+                                        savedComponentItemHandlerList.setStackInSlot(componentSlots, unSavedItem.copyAndClear());
+                                    } else {
+                                        unSavedItem.setCount(0);
+                                    }
+                                }
+                            } else {
+                                serverPlayer.drop(unSavedItem, false);
+                            }
                         }
+                        playerStack.setCount(0);
                     }
                     removeAndModifyDroppedItems(serverPlayer, savedStack, playerStack, savedPlayerInventory, i);
                 }
@@ -180,6 +178,41 @@ public class BetterRespawnOptions {
                         ItemStack playerCuriosStack = playerCuriosHandler.getEquippedCurios().getStackInSlot(i);
                         if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty() || !ItemStack.isSameItem(playerCuriosStack, savedCuriosStack))
                             savedPlayerInventory.setCuriosStackInSlot(i, ItemStack.EMPTY);
+                        // For the love of god random backpack mods please use this system please man!!!!!!!!!
+                        ComponentItemHandler componentItemHandlerList = (ComponentItemHandler) playerCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
+                        ComponentItemHandler savedComponentItemHandlerList = (ComponentItemHandler) savedCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
+                        if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
+                            for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
+                                ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
+                                ItemStack savedItem = savedComponentItemHandlerList.getStackInSlot(componentSlots);
+                                if (unSavedItem.isEmpty() && !savedItem.isEmpty() || !ItemStack.isSameItem(savedItem, unSavedItem)) {
+                                    savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
+                                }
+                                if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(unSavedItem.getItem()).toString()))
+                                    serverPlayer.drop(unSavedItem, false);
+                                if (ItemStack.isSameItem(unSavedItem, savedItem)) {
+                                    if (unSavedItem.getCount() > savedItem.getCount()) {
+                                        unSavedItem.setCount(unSavedItem.getCount() - savedItem.getCount());
+                                        serverPlayer.drop(unSavedItem, false);
+                                    }
+                                    if (unSavedItem.getCount() < savedItem.getCount()) {
+                                        savedItem.setCount(unSavedItem.getCount());
+                                    }
+                                    if (unSavedItem.getDamageValue() != savedItem.getDamageValue())
+                                        savedItem.setDamageValue(unSavedItem.getDamageValue());
+                                    if (!ItemStack.isSameItemSameComponents(unSavedItem, savedItem)) {
+                                        if (Config.COMMON.transferData.get()) {
+                                            savedComponentItemHandlerList.setStackInSlot(componentSlots, unSavedItem.copyAndClear());
+                                        } else {
+                                            unSavedItem.setCount(0);
+                                        }
+                                    }
+                                } else {
+                                    serverPlayer.drop(unSavedItem, false);
+                                }
+                            }
+                            playerCuriosStack.setCount(0);
+                        }
                         removeAndModifyDroppedItems(serverPlayer, savedCuriosStack, playerCuriosStack, savedPlayerInventory, i);
                     }
                 }
