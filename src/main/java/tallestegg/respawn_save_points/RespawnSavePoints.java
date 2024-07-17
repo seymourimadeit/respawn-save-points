@@ -170,7 +170,7 @@ public class RespawnSavePoints {
                                 ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
                                 if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(shulkerItem.getItem()).toString()))
                                     serverPlayer.drop(shulkerItem, false);
-                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty())
+                                if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty() || !ItemStack.isSameItem(savedShulkerItem, shulkerItem))
                                     savedShulkerItemList.set(shulkerSlot, shulkerItem);
                                 if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
                                     if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
@@ -183,7 +183,7 @@ public class RespawnSavePoints {
                                         savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
                                     if (!ItemStack.isSameItemSameTags(shulkerItem, savedShulkerItem)) {
                                         if (Config.COMMON.transferData.get()) {
-                                            savedShulkerItem.setTag(shulkerItem.getTag());
+                                            savedShulkerItemList.set(shulkerSlot, shulkerItem.copyAndClear());
                                         } else {
                                             shulkerItem.setCount(0);
                                         }
@@ -244,8 +244,7 @@ public class RespawnSavePoints {
                                             savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
                                         if (!ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem)) {
                                             if (Config.COMMON.transferData.get()) {
-                                                savedBackpackItem.setTag(playerBackpackitem.getTag());
-                                                RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, savedBackpackItem.copy());
+                                                RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, playerBackpackitem.copy());
                                             } else {
                                                 playerBackpackitem.setCount(0);
                                             }
@@ -430,7 +429,7 @@ public class RespawnSavePoints {
                     savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
                 if (!ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem)) {
                     if (Config.COMMON.transferData.get()) {
-                        savedBackpackItem.setTag(playerBackpackitem.getTag());
+                        savedCap.setStackInSlot(backPackSlot, playerBackpackitem.copyAndClear());
                     } else {
                         playerBackpackitem.setCount(0);
                     }
