@@ -1,1 +1,1 @@
-- Bundle support!!!!!!!
+- Fix issues with Curios items still persisting after death when taken out
