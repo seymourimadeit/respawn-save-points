@@ -1,1 +1,1 @@
-- Curios continuation support!!!!
+- Config menu support
