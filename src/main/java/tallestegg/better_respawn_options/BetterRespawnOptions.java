@@ -59,7 +59,6 @@ public class BetterRespawnOptions {
         NeoForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
         container.registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
-        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         BROData.ATTACHMENT_TYPES.register(modEventBus);
         BROBlockEntities.BLOCK_ENTITIES.register(modEventBus);
     }
@@ -378,6 +377,13 @@ public class BetterRespawnOptions {
             playerStack.setCount(0);
         if (playerStack.getCount() > savedStack.getCount()) {
             playerStack.setCount(playerStack.getCount() - savedStack.getCount());
+        }
+    }
+
+    @Mod(value = MODID, dist = Dist.CLIENT)
+    public static class BetterRespawnOptionsClient {
+        public BetterRespawnOptionsClient(IEventBus modEventBus, Dist dist, ModContainer container) {
+            container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         }
     }
 }
