@@ -1,1 +1,1 @@
-- Fix issues with Curios items still persisting after death when taken out
+- Fixed an item dupe glitch

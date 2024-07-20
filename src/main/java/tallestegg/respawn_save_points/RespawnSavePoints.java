@@ -489,9 +489,6 @@ public class RespawnSavePoints {
 
     public static void removeAndModifyDroppedItems(ServerPlayer serverPlayer, ItemStack savedStack, ItemStack playerStack, SavedPlayerInventory savedPlayerInventory, int slot) {
         if (ItemStack.isSameItem(playerStack, savedStack)) {
-            if (playerStack.getCount() > savedStack.getCount()) {
-                serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
-            }
             if (playerStack.getCount() < savedStack.getCount()) {
                 savedStack.setCount(playerStack.getCount());
             }
@@ -511,5 +508,7 @@ public class RespawnSavePoints {
         }
         if (ItemStack.matches(savedStack, playerStack))
             playerStack.setCount(0);
+        if (playerStack.getCount() > savedStack.getCount())
+            playerStack.setCount(playerStack.getCount() - savedStack.getCount());
     }
 }
