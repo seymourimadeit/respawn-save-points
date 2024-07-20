@@ -1,5 +1,26 @@
 {
   "message.respawn_save_points.saved": "Inventory saved",
   "message.respawn_save_points.saved_curios": "Curios items saved",
-  "message.respawn_save_points.not_saved": "Items not saved: %s"
+  "message.respawn_save_points.not_saved": "Items not saved: %s",
+  "respawn_save_points.configuration.additional options.tooltip": "Additional Options",
+  "respawn_save_points.configuration.section.respawn.save.points.common.toml": "",
+  "respawn_save_points.configuration.additional options": "Additional Options",
+  "respawn_save_points.configuration.section.respawn.save.points.common.toml.title": "Respawn Save Points config",
+  "respawn_save_points.configuration.Transfer all item data to unsaved items of the same type as their saved counterpart.tooltip": "Transfer all item data to unsaved items of the same type as their saved counterpart",
+  "respawn_save_points.configuration.Show excluded items message.tooltip": "Show excluded items",
+  "respawn_save_points.configuration.Save xp along with inventory.tooltip": "Save xp along with inventory.",
+  "respawn_save_points.configuration.Items that cannot be saved via beds or respawn anchors.tooltip": "List of items that cannot be saved via beds or respawn anchors",
+  "respawn_save_points.configuration.Drop items still.tooltip": "Drop items still",
+  "respawn_save_points.configuration.Transfer lost durability.tooltip": "Transfer lost durability",
+  "respawn_save_points.configuration.title": "Respawn Save Points config",
+  "respawn_save_points.configuration.Show saved items message.tooltip": "Show saved items message",
+  "respawn_save_points.configuration.% of items kept after dying.tooltip": "% of items kept after dying.tooltip",
+  "respawn_save_points.configuration.Save xp along with inventory": "Save xp along with inventory",
+  "respawn_save_points.configuration.% of items kept after dying": ".% of items kept after dying\"",
+  "respawn_save_points.configuration.Drop items still": "Drop items still\"",
+  "respawn_save_points.configuration.Transfer lost durability": "Transfer lost durability",
+  "respawn_save_points.configuration.Show excluded items message": "Show excluded items message",
+  "respawn_save_points.configuration.Items that cannot be saved via beds or respawn anchors": "Items that cannot be saved via beds or respawn anchors",
+  "respawn_save_points.configuration.Show saved items message": "Show saved items message",
+  "respawn_save_points.configuration.Transfer all item data to unsaved items of the same type as their saved counterpart": "Transfer all item data to unsaved items of the same type as their saved counterpart"
 }

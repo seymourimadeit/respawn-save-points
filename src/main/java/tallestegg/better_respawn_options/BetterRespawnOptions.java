@@ -7,7 +7,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.BundleContents;
@@ -15,7 +14,6 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BedBlock;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.BedBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,6 +27,8 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
@@ -59,6 +59,7 @@ public class BetterRespawnOptions {
         NeoForge.EVENT_BUS.register(this);
         modEventBus.addListener(this::addCreative);
         container.registerConfig(ModConfig.Type.COMMON, Config.COMMON_SPEC);
+        container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         BROData.ATTACHMENT_TYPES.register(modEventBus);
         BROBlockEntities.BLOCK_ENTITIES.register(modEventBus);
     }
@@ -168,7 +169,7 @@ public class BetterRespawnOptions {
                         }
                         playerStack.setCount(0);
                     }
-                    removeAndModifyDroppedItems(serverPlayer, savedStack, playerStack, savedPlayerInventory, i);
+                    removeAndModifyDroppedItems(savedStack, playerStack, savedPlayerInventory, i);
                 }
                 for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
                     if (ModList.get().isLoaded("curios")) {
@@ -213,7 +214,7 @@ public class BetterRespawnOptions {
                             }
                             playerCuriosStack.setCount(0);
                         }
-                        removeAndModifyDroppedItems(serverPlayer, savedCuriosStack, playerCuriosStack, savedPlayerInventory, i);
+                        removeAndModifyDroppedItems(savedCuriosStack, playerCuriosStack, savedPlayerInventory, i);
                     }
                 }
                 respawnPoint.setChanged();
@@ -358,11 +359,8 @@ public class BetterRespawnOptions {
         handleBundleItems(savedItems, playerItems, serverPlayer, playerStack);
     }
 
-    public static void removeAndModifyDroppedItems(ServerPlayer serverPlayer, ItemStack savedStack, ItemStack playerStack, SavedPlayerInventory savedPlayerInventory, int slot) {
+    public static void removeAndModifyDroppedItems(ItemStack savedStack, ItemStack playerStack, SavedPlayerInventory savedPlayerInventory, int slot) {
         if (ItemStack.isSameItem(playerStack, savedStack)) {
-            if (playerStack.getCount() > savedStack.getCount()) {
-                serverPlayer.drop(playerStack.copyWithCount(playerStack.getCount() - savedStack.getCount()), false);
-            }
             if (playerStack.getCount() < savedStack.getCount()) {
                 savedStack.setCount(playerStack.getCount());
             }
@@ -378,5 +376,8 @@ public class BetterRespawnOptions {
         }
         if (ItemStack.matches(savedStack, playerStack))
             playerStack.setCount(0);
+        if (playerStack.getCount() > savedStack.getCount()) {
+            playerStack.setCount(playerStack.getCount() - savedStack.getCount());
+        }
     }
 }
