@@ -343,9 +343,9 @@ public class BetterRespawnOptions {
                 playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && !ItemStack.isSameItemSameComponents(savedBundled, itemStack));
             }
             playerItems.removeIf(itemStack -> ItemStack.matches(itemStack, savedBundled));
-            playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
-            playerStack.setCount(0);
         }
+        playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
+        playerStack.setCount(0);
     }
 
     public static void handleBundles(ServerPlayer serverPlayer, ItemStack savedStack, ItemStack playerStack, List<ItemStack> savedItems, List<ItemStack> playerItems, BundleContents.Mutable bundleItemList, BundleContents.Mutable savedBundleItemList) {
