@@ -37,6 +37,7 @@ import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.items.ComponentItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import org.apache.commons.lang3.ArrayUtils;
 import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
 import tallestegg.better_respawn_options.block_entities.RespawnAnchorBlockEntity;
@@ -134,8 +135,8 @@ public class BetterRespawnOptions {
                         }
                         handleBundles(serverPlayer, savedStack, playerStack, savedItems, playerItems, bundleItemList, savedBundleItemList);
                     }
-                    ComponentItemHandler componentItemHandlerList = (ComponentItemHandler) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
-                    ComponentItemHandler savedComponentItemHandlerList = (ComponentItemHandler) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
+                    IItemHandlerModifiable componentItemHandlerList = (IItemHandlerModifiable) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
+                    IItemHandlerModifiable savedComponentItemHandlerList = (IItemHandlerModifiable) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
                     if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
                         for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
                             ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
@@ -179,8 +180,8 @@ public class BetterRespawnOptions {
                         if (!savedCuriosStack.isEmpty() && playerCuriosStack.isEmpty() || !ItemStack.isSameItem(playerCuriosStack, savedCuriosStack))
                             savedPlayerInventory.setCuriosStackInSlot(i, ItemStack.EMPTY);
                         // For the love of god random backpack mods please use this system please man!!!!!!!!!
-                        ComponentItemHandler componentItemHandlerList = (ComponentItemHandler) playerCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
-                        ComponentItemHandler savedComponentItemHandlerList = (ComponentItemHandler) savedCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
+                        IItemHandlerModifiable componentItemHandlerList = (IItemHandlerModifiable) playerCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
+                        IItemHandlerModifiable savedComponentItemHandlerList = (IItemHandlerModifiable) savedCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
                         if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
                             for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
                                 ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
@@ -343,8 +344,8 @@ public class BetterRespawnOptions {
                 playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && !ItemStack.isSameItemSameComponents(savedBundled, itemStack));
             }
             playerItems.removeIf(itemStack -> ItemStack.matches(itemStack, savedBundled));
+            playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         }
-        playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         playerStack.setCount(0);
     }
 
