@@ -452,8 +452,8 @@ public class RespawnSavePoints {
                 playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getDamageValue() != savedBundled.getDamageValue());
             }
             playerItems.removeIf(itemStack -> ItemStack.matches(itemStack, savedBundled));
+            playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         }
-        playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));
         playerStack.setCount(0);
     }
 
