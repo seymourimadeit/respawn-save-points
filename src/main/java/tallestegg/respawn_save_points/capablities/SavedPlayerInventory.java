@@ -6,8 +6,13 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.items.ItemStackHandler;
 import net.minecraftforge.registries.ForgeRegistries;
+import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
+import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.BackpackWrapper;
+import net.p3pp3rf1y.sophisticatedcore.util.InventoryHelper;
 import org.jetbrains.annotations.NotNull;
 import tallestegg.respawn_save_points.Config;
 
@@ -73,12 +78,22 @@ public class SavedPlayerInventory extends ItemStackHandler {
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
         if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()) && !EnchantmentHelper.hasVanishingCurse(stack))
             this.curiosItems.set(slot, stack);
+        if (ModList.get().isLoaded("sophisticatedbackpacks") && stack.getItem() instanceof BackpackItem backpackItem) {
+            ItemStack originalStack = stack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).cloneBackpack();
+            stack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).setContentsUuid(UUID.randomUUID());
+            originalStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).copyDataTo(new BackpackWrapper(stack));
+        }
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
         if (!Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(stack.getItem()).toString()) && !EnchantmentHelper.hasVanishingCurse(stack))
             super.setStackInSlot(slot, stack);
+        if (ModList.get().isLoaded("sophisticatedbackpacks") && stack.getItem() instanceof BackpackItem backpackItem) {
+            ItemStack originalStack = stack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).cloneBackpack();
+            stack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).setContentsUuid(UUID.randomUUID());
+            originalStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).copyDataTo(new BackpackWrapper(stack));
+        }
     }
 
     public ItemStack getCuriosStackInSlot(int slot) {
