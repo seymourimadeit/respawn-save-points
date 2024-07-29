@@ -27,7 +27,10 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.capabilities.*;
+import net.minecraftforge.common.capabilities.Capability;
+import net.minecraftforge.common.capabilities.ICapabilityProvider;
+import net.minecraftforge.common.capabilities.ICapabilitySerializable;
+import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.common.util.LazyOptional;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
@@ -46,15 +49,9 @@ import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.items.IItemHandlerModifiable;
 import net.minecraftforge.registries.ForgeRegistries;
-import net.p3pp3rf1y.sophisticatedbackpacks.api.CapabilityBackpackWrapper;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.BackpackItem;
-import net.p3pp3rf1y.sophisticatedbackpacks.backpack.wrapper.BackpackWrapper;
-import net.p3pp3rf1y.sophisticatedcore.inventory.InventoryHandler;
-import net.p3pp3rf1y.sophisticatedcore.util.InventoryHelper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.violetmoon.quark.base.handler.ProxiedItemStackHandler;
 import tallestegg.respawn_save_points.block_entities.RespawnAnchorBlockEntity;
 import tallestegg.respawn_save_points.capablities.RSPCapabilities;
 import tallestegg.respawn_save_points.capablities.SavedPlayerInventory;
@@ -63,6 +60,8 @@ import top.theillusivec4.curios.api.type.capability.ICuriosItemHandler;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static tallestegg.respawn_save_points.ModCompat.doSBCompat;
 
 @Mod.EventBusSubscriber(modid = RespawnSavePoints.MODID)
 @Mod(RespawnSavePoints.MODID)
@@ -95,24 +94,18 @@ public class RespawnSavePoints {
                     for (int i = 0; i < inventory.getContainerSize(); i++) {
                         ItemStack savedStack = savedPlayerInventory.getStackInSlot(i);
                         ItemStack playerStack = inventory.getItem(i);
-                        if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
-                            savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
-                        if (ModList.get().isLoaded("sophisticatedbackpacks") && savedStack.getItem() instanceof BackpackItem) {
-                            ItemStack originalStack = savedStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).cloneBackpack();
-                            savedStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).setContentsUuid(UUID.randomUUID());
-                            originalStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).copyDataTo(new BackpackWrapper(savedStack)); // This shit made so fucking crazy like what the fuck who saves their shit with a UUID:??????????!?!?!?!?!??!!? I spent more time than anyone should working on this!!!!!!!
-                        }
-                        inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
+                        if (savedStack.isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedStack.getCount() > 1)
+                            savedStack.setCount((int) (savedStack.getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
+                        if (ModList.get().isLoaded("sophisticatedbackpacks"))
+                            doSBCompat(savedStack);
+                        inventory.setItem(i, savedStack.copy());
                     }
                     if (ModList.get().isLoaded("curios")) {
                         Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player).resolve();
                         if (curiosApi.isPresent()) {
                             for (int i = 0; i < curiosApi.get().getSlots(); i++) {
-                                if (ModList.get().isLoaded("sophisticatedbackpacks") && savedPlayerInventory.getCuriosStackInSlot(i).getItem() instanceof BackpackItem) {
-                                    ItemStack originalStack = savedPlayerInventory.getCuriosStackInSlot(i).getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).cloneBackpack();
-                                    savedPlayerInventory.getCuriosStackInSlot(i).getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).setContentsUuid(UUID.randomUUID());
-                                    originalStack.getCapability(CapabilityBackpackWrapper.getCapabilityInstance()).orElseGet(null).copyDataTo(new BackpackWrapper(savedPlayerInventory.getCuriosStackInSlot(i)));
-                                }
+                                if (ModList.get().isLoaded("sophisticatedbackpacks")) // For some reason this crashes in production unless a double check is done... This made me become the joker for a solid 10 minutes.
+                                    doSBCompat(savedPlayerInventory.getCuriosStackInSlot(i));
                                 curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
                             }
                         }
@@ -234,6 +227,10 @@ public class RespawnSavePoints {
                                         }
                                         if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
                                             savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
+                                        if (EnchantmentHelper.hasBindingCurse(savedBackpackItem)) {
+                                            Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(savedBackpackItem).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                                            EnchantmentHelper.setEnchantments(map, savedBackpackItem);
+                                        }
                                         if (!ItemStack.isSameItemSameTags(playerBackpackitem, savedBackpackItem)) {
                                             if (Config.COMMON.transferData.get()) {
                                                 RespawnSavePoints.setBackpackedBackpackItems(backPackSlot, savedCuriosStack, playerBackpackitem.copy());
@@ -418,6 +415,10 @@ public class RespawnSavePoints {
                             playerBackpackitem.setCount(0);
                         }
                     }
+                    if (EnchantmentHelper.hasBindingCurse(savedStack)) {
+                        Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(savedStack).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                        EnchantmentHelper.setEnchantments(map, savedStack);
+                    }
                 } else {
                     player.drop(playerBackpackitem, false);
                 }
@@ -435,6 +436,10 @@ public class RespawnSavePoints {
                 playerItems.stream().filter(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getDamageValue() != savedBundled.getDamageValue()).findAny().ifPresent(itemStack -> savedBundled.setDamageValue(itemStack.getDamageValue()));
             } else {
                 playerItems.removeIf(itemStack -> ItemStack.isSameItem(itemStack, savedBundled) && itemStack.getDamageValue() != savedBundled.getDamageValue());
+            }
+            if (EnchantmentHelper.hasBindingCurse(savedBundled)) {
+                Map<Enchantment, Integer> map = EnchantmentHelper.getEnchantments(savedBundled).entrySet().stream().filter((p_39584_) -> !(p_39584_.getKey() instanceof BindingCurseEnchantment)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                EnchantmentHelper.setEnchantments(map, savedBundled);
             }
             playerItems.removeIf(itemStack -> ItemStack.matches(itemStack, savedBundled));
             playerItems.forEach(itemStack -> serverPlayer.drop(itemStack, false));

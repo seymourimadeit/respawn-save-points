@@ -1,1 +1,3 @@
-- Fixed an item dupe glitch
+- Improvements to mod compatibility!!!!
+    - Any mod that has an item with the appropriate capability will be supported by this mod
+- Fixed various odd item dupe glitches
