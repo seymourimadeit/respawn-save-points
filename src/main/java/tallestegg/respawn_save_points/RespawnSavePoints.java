@@ -366,7 +366,7 @@ public class RespawnSavePoints {
                         savedCap.setStackInSlot(backPackSlot, savedBackpackItem.copy());
                     }
                     if (playerBackpackitem.getCount() < savedBackpackItem.getCount()) {
-                        savedBackpackItem.setCount(playerBackpackitem.getCount());
+                        savedCap.setStackInSlot(backPackSlot, savedBackpackItem.copyWithCount(playerBackpackitem.getCount()));
                     }
                     if (playerBackpackitem.getDamageValue() > savedBackpackItem.getDamageValue())
                         savedBackpackItem.setDamageValue(playerBackpackitem.getDamageValue());
