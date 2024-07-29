@@ -150,44 +150,6 @@ public class RespawnSavePoints {
                             }
                             handleBundles(serverPlayer, savedStack, playerStack, savedItems, playerItems);
                         }
-                        if (savedStack.getItem() instanceof BlockItem savedBlockItem && playerStack.getItem() instanceof BlockItem playerBlockItem) {
-                            if (savedBlockItem.getBlock() instanceof ShulkerBoxBlock && playerBlockItem.getBlock() instanceof ShulkerBoxBlock) {
-                                NonNullList<ItemStack> shulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
-                                NonNullList<ItemStack> savedShulkerItemList = NonNullList.withSize(27, ItemStack.EMPTY);
-                                ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
-                                ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
-                                for (int shulkerSlot = 0; shulkerSlot < shulkerItemList.size(); shulkerSlot++) {
-                                    ItemStack shulkerItem = shulkerItemList.get(shulkerSlot);
-                                    ItemStack savedShulkerItem = savedShulkerItemList.get(shulkerSlot);
-                                    if (Config.COMMON.itemBlacklist.get().contains(ForgeRegistries.ITEMS.getKey(shulkerItem.getItem()).toString()))
-                                        serverPlayer.drop(shulkerItem, false);
-                                    if (shulkerItem.isEmpty() && !savedShulkerItem.isEmpty() || !ItemStack.isSameItem(savedShulkerItem, shulkerItem))
-                                        savedShulkerItemList.set(shulkerSlot, ItemStack.EMPTY);
-                                    if (ItemStack.isSameItem(shulkerItem, savedShulkerItem)) {
-                                        if (shulkerItem.getCount() > savedShulkerItem.getCount()) {
-                                            shulkerItem.setCount(shulkerItem.getCount() - savedShulkerItem.getCount());
-                                            serverPlayer.drop(shulkerItem, false);
-                                        }
-                                        if (shulkerItem.getCount() < savedShulkerItem.getCount())
-                                            savedShulkerItem.setCount(shulkerItem.getCount());
-                                        if (shulkerItem.getDamageValue() > savedShulkerItem.getDamageValue())
-                                            savedShulkerItem.setDamageValue(shulkerItem.getDamageValue());
-                                        if (!ItemStack.isSameItemSameTags(shulkerItem, savedShulkerItem)) {
-                                            if (Config.COMMON.transferData.get()) {
-                                                savedShulkerItemList.set(shulkerSlot, shulkerItem.copyAndClear());
-                                            } else {
-                                                shulkerItem.setCount(0);
-                                            }
-                                        }
-                                    } else {
-                                        serverPlayer.drop(shulkerItem, false);
-                                    }
-                                    ContainerHelper.saveAllItems(BlockItem.getBlockEntityData(savedStack), savedShulkerItemList);
-                                    ContainerHelper.loadAllItems(BlockItem.getBlockEntityData(playerStack), shulkerItemList);
-                                }
-                                playerStack.setCount(0);
-                            }
-                        }
                         IItemHandlerModifiable playerBackpackHandler = RSPCapabilities.getItemModifiableCap(playerStack);
                         IItemHandlerModifiable savedBackpackHandler = RSPCapabilities.getItemModifiableCap(savedStack);
                         if (playerBackpackHandler != null && savedBackpackHandler != null)
