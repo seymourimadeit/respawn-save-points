@@ -36,7 +36,6 @@ import net.neoforged.neoforge.event.entity.living.LivingDropsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
-import net.neoforged.neoforge.items.ComponentItemHandler;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import org.apache.commons.lang3.ArrayUtils;
 import tallestegg.better_respawn_options.block_entities.BROBlockEntities;
@@ -137,38 +136,7 @@ public class BetterRespawnOptions {
                     }
                     IItemHandlerModifiable componentItemHandlerList = (IItemHandlerModifiable) playerStack.getCapability(Capabilities.ItemHandler.ITEM);
                     IItemHandlerModifiable savedComponentItemHandlerList = (IItemHandlerModifiable) savedStack.getCapability(Capabilities.ItemHandler.ITEM);
-                    if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
-                        for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
-                            ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
-                            ItemStack savedItem = savedComponentItemHandlerList.getStackInSlot(componentSlots);
-                            if (unSavedItem.isEmpty() && !savedItem.isEmpty() || !ItemStack.isSameItem(savedItem, unSavedItem)) {
-                                savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
-                            }
-                            if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(unSavedItem.getItem()).toString()))
-                                serverPlayer.drop(unSavedItem, false);
-                            if (ItemStack.isSameItem(unSavedItem, savedItem)) {
-                                if (unSavedItem.getCount() > savedItem.getCount()) {
-                                    unSavedItem.setCount(unSavedItem.getCount() - savedItem.getCount());
-                                    serverPlayer.drop(unSavedItem, false);
-                                }
-                                if (unSavedItem.getCount() < savedItem.getCount()) {
-                                    savedItem.setCount(unSavedItem.getCount());
-                                }
-                                if (unSavedItem.getDamageValue() != savedItem.getDamageValue())
-                                    savedItem.setDamageValue(unSavedItem.getDamageValue());
-                                if (!ItemStack.isSameItemSameComponents(unSavedItem, savedItem)) {
-                                    if (Config.COMMON.transferData.get()) {
-                                        savedComponentItemHandlerList.setStackInSlot(componentSlots, unSavedItem.copyAndClear());
-                                    } else {
-                                        unSavedItem.setCount(0);
-                                    }
-                                }
-                            } else {
-                                serverPlayer.drop(unSavedItem, false);
-                            }
-                        }
-                        playerStack.setCount(0);
-                    }
+                    handleItemCaps(componentItemHandlerList, savedComponentItemHandlerList, serverPlayer, playerStack, savedStack);
                     removeAndModifyDroppedItems(savedStack, playerStack, savedPlayerInventory, i);
                 }
                 for (int i = 0; i < savedPlayerInventory.getCuriosItems().size(); i++) {
@@ -182,38 +150,7 @@ public class BetterRespawnOptions {
                         // For the love of god random backpack mods please use this system please man!!!!!!!!!
                         IItemHandlerModifiable componentItemHandlerList = (IItemHandlerModifiable) playerCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
                         IItemHandlerModifiable savedComponentItemHandlerList = (IItemHandlerModifiable) savedCuriosStack.getCapability(Capabilities.ItemHandler.ITEM);
-                        if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
-                            for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
-                                ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
-                                ItemStack savedItem = savedComponentItemHandlerList.getStackInSlot(componentSlots);
-                                if (unSavedItem.isEmpty() && !savedItem.isEmpty() || !ItemStack.isSameItem(savedItem, unSavedItem)) {
-                                    savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
-                                }
-                                if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(unSavedItem.getItem()).toString()))
-                                    serverPlayer.drop(unSavedItem, false);
-                                if (ItemStack.isSameItem(unSavedItem, savedItem)) {
-                                    if (unSavedItem.getCount() > savedItem.getCount()) {
-                                        unSavedItem.setCount(unSavedItem.getCount() - savedItem.getCount());
-                                        serverPlayer.drop(unSavedItem, false);
-                                    }
-                                    if (unSavedItem.getCount() < savedItem.getCount()) {
-                                        savedItem.setCount(unSavedItem.getCount());
-                                    }
-                                    if (unSavedItem.getDamageValue() != savedItem.getDamageValue())
-                                        savedItem.setDamageValue(unSavedItem.getDamageValue());
-                                    if (!ItemStack.isSameItemSameComponents(unSavedItem, savedItem)) {
-                                        if (Config.COMMON.transferData.get()) {
-                                            savedComponentItemHandlerList.setStackInSlot(componentSlots, unSavedItem.copyAndClear());
-                                        } else {
-                                            unSavedItem.setCount(0);
-                                        }
-                                    }
-                                } else {
-                                    serverPlayer.drop(unSavedItem, false);
-                                }
-                            }
-                            playerCuriosStack.setCount(0);
-                        }
+                        handleItemCaps(componentItemHandlerList, savedComponentItemHandlerList, serverPlayer, playerCuriosStack, savedCuriosStack);
                         removeAndModifyDroppedItems(savedCuriosStack, playerCuriosStack, savedPlayerInventory, i);
                     }
                 }
@@ -378,6 +315,45 @@ public class BetterRespawnOptions {
             playerStack.setCount(0);
         if (playerStack.getCount() > savedStack.getCount()) {
             playerStack.setCount(playerStack.getCount() - savedStack.getCount());
+        }
+    }
+
+    public static void handleItemCaps(IItemHandlerModifiable componentItemHandlerList, IItemHandlerModifiable savedComponentItemHandlerList, ServerPlayer serverPlayer, ItemStack unsavedStack, ItemStack savedStack) {
+        if (componentItemHandlerList != null && savedComponentItemHandlerList != null) {
+            if (ItemStack.isSameItem(unsavedStack, savedStack)) {
+                for (int componentSlots = 0; componentSlots < savedComponentItemHandlerList.getSlots(); componentSlots++) {
+                    ItemStack unSavedItem = componentItemHandlerList.getStackInSlot(componentSlots);
+                    ItemStack savedItem = savedComponentItemHandlerList.getStackInSlot(componentSlots);
+                    if (unSavedItem.isEmpty() && !savedItem.isEmpty() || !ItemStack.isSameItem(savedItem, unSavedItem))
+                        savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
+                    if (Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(unSavedItem.getItem()).toString())) {
+                        serverPlayer.drop(unSavedItem, false);
+                        savedComponentItemHandlerList.setStackInSlot(componentSlots, ItemStack.EMPTY);
+                    }
+                    if (ItemStack.isSameItem(unSavedItem, savedItem)) {
+                        if (unSavedItem.getCount() > savedItem.getCount()) {
+                            unSavedItem.setCount(unSavedItem.getCount() - savedItem.getCount());
+                            serverPlayer.drop(unSavedItem, false);
+                        }
+                        if (unSavedItem.getCount() < savedItem.getCount()) {
+                            savedItem.setCount(unSavedItem.getCount());
+                            savedComponentItemHandlerList.setStackInSlot(componentSlots, savedItem.copyAndClear());
+                        }
+                        if (unSavedItem.getDamageValue() != savedItem.getDamageValue())
+                            savedItem.setDamageValue(unSavedItem.getDamageValue());
+                        if (!ItemStack.isSameItemSameComponents(unSavedItem, savedItem)) {
+                            if (Config.COMMON.transferData.get()) {
+                                savedComponentItemHandlerList.setStackInSlot(componentSlots, unSavedItem.copyAndClear());
+                            } else {
+                                unSavedItem.setCount(0);
+                            }
+                        }
+                    } else {
+                        serverPlayer.drop(unSavedItem, false);
+                    }
+                }
+                unsavedStack.setCount(0);
+            }
         }
     }
 
