@@ -1,2 +1,1 @@
-- Better support for mod compatibility
-- Fixed bug with bundle drops on death
+- Readded specific compat for sophisticated backpacks

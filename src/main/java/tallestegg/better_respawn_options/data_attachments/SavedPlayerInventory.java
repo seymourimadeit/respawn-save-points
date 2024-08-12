@@ -7,6 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.ModList;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -15,6 +16,8 @@ import org.jetbrains.annotations.NotNull;
 import tallestegg.better_respawn_options.Config;
 
 import java.util.UUID;
+
+import static tallestegg.better_respawn_options.ModCompat.doSBCompat;
 
 public class SavedPlayerInventory extends ItemStackHandler {
     public int experienceLevel;
@@ -76,12 +79,16 @@ public class SavedPlayerInventory extends ItemStackHandler {
     public void setCuriosStackInSlot(int slot, @NotNull ItemStack stack) {
         if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) && !EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP))
             this.curiosItems.set(slot, stack);
+        if (ModList.get().isLoaded("sophisticatedbackpacks"))
+            doSBCompat(stack);
     }
 
     @Override
     public void setStackInSlot(int slot, @NotNull ItemStack stack) {
         if (!Config.COMMON.itemBlacklist.get().contains(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()) && !EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP))
             super.setStackInSlot(slot, stack);
+        if (ModList.get().isLoaded("sophisticatedbackpacks"))
+            doSBCompat(stack);
     }
 
     public ItemStack getCuriosStackInSlot(int slot) {

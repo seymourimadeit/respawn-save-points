@@ -76,6 +76,8 @@ dependencies {
     implementation "net.neoforged:neoforge:${neo_version}"
     implementation "curse.maven:curios-continuation-1037991:5476603"
     implementation "curse.maven:modular-angel-ring-1037481:5444154"
+    implementation "curse.maven:sophisticated-backpacks-422301:5621986"
+    implementation "curse.maven:sophisticated-core-618298:5621984"
 }
 
 repositories {

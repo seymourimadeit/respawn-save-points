@@ -82,12 +82,16 @@ public class BetterRespawnOptions {
                         for (int i = 0; i < inventory.getContainerSize(); i++) {
                             if (savedPlayerInventory.getStackInSlot(i).isStackable() && Config.COMMON.percentageOfItemsKept.get().floatValue() < 1.0F && savedPlayerInventory.getStackInSlot(i).getCount() > 1)
                                 savedPlayerInventory.getStackInSlot(i).setCount((int) (savedPlayerInventory.getStackInSlot(i).getCount() * Config.COMMON.percentageOfItemsKept.get().floatValue()));
+                            if (ModList.get().isLoaded("sophisticatedbackpacks"))
+                                ModCompat.doSBCompat(savedPlayerInventory.getStackInSlot(i));
                             inventory.setItem(i, savedPlayerInventory.getStackInSlot(i).copy());
                         }
                         if (ModList.get().isLoaded("curios")) {
                             Optional<ICuriosItemHandler> curiosApi = CuriosApi.getCuriosInventory(player);
                             if (curiosApi.isPresent()) {
                                 for (int i = 0; i < curiosApi.get().getSlots(); i++) {
+                                    if (ModList.get().isLoaded("sophisticatedbackpacks")) // For some reason this crashes in production unless a double check is done... This made me become the joker for a solid 10 minutes.
+                                        ModCompat.doSBCompat(savedPlayerInventory.getCuriosStackInSlot(i));
                                     curiosApi.get().getEquippedCurios().setStackInSlot(i, savedPlayerInventory.getCuriosStackInSlot(i).copy());
                                 }
                             }

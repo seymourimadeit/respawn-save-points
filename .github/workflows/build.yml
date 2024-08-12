@@ -29,9 +29,9 @@ jobs:
           curseforge-id: 1035335
           curseforge-token: ${{ secrets.CURSEFORGE_TOKEN }}
           files: build/libs/!(*-@(javadoc|sources)).jar
-          version-type: beta
+          version-type: release
           loaders: neoforge
-          game-versions: 1.21
+          game-versions: 1.21, 1.21.1
           java: 21
           name: ""
           modrinth-id: cHtZAjju
