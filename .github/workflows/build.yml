@@ -31,7 +31,7 @@ jobs:
           files: build/libs/!(*-@(javadoc|sources)).jar
           version-type: release
           loaders: neoforge
-          game-versions: 1.21, 1.21.1
+          game-versions: [1.21, 1.21.1]
           java: 21
           name: ""
           modrinth-id: cHtZAjju
